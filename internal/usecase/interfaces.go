@@ -17,6 +17,7 @@ type UserRepository interface {
 	ListUsers(ctx context.Context, search string, page, perPage int) (*[]entity.User, int, error) //int for total users for pagination
 	CreateUser(ctx context.Context, user *entity.User) error
 	GetUserByID(ctx context.Context, id uint) (*entity.User, error)
+	GetUserByEmail(ctx context.Context, email string) (*entity.User, error)
 	UpdateUser(ctx context.Context, id uint, user *entity.User) error
 	DeleteUser(ctx context.Context, id uint) error
 }

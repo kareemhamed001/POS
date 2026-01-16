@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"github.com/kareemhamed001/POS/internal/entity"
+	"github.com/kareemhamed001/POS/pkg/password"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -55,4 +56,38 @@ func (u *UserUsecase) UpdateUser(ctx context.Context, id uint, user *entity.User
 }
 func (u *UserUsecase) DeleteUser(ctx context.Context, id uint) error {
 	return u.userRepository.DeleteUser(ctx, id)
+}
+
+// Register creates a new user account
+func (u *UserUsecase) Register(ctx context.Context, user *entity.User) (*entity.User, error) {
+	hashedPassword, err := password.Hash(user.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	user.Password = hashedPassword
+	if user.Role == "" {
+		user.Role = entity.RoleCustomer
+	}
+
+	if err := u.userRepository.CreateUser(ctx, user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+// Login verifies user credentials and returns the user if valid
+func (u *UserUsecase) Login(ctx context.Context, email, pwd string) (*entity.User, error) {
+	// Get user by email
+	user, err := u.userRepository.GetUserByEmail(ctx, email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify password
+	if !password.Verify(user.Password, pwd) {
+		return nil, bcrypt.ErrMismatchedHashAndPassword
+	}
+
+	return user, nil
 }

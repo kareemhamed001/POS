@@ -1,0 +1,1147 @@
+{
+	"info": {
+		"_postman_id": "pos-api-collection-2026",
+		"name": "POS API",
+		"description": "Complete API collection for Point of Sale system with examples for all endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"password\": \"SecurePass123!\",\n  \"role\": \"customer\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Create a new user. Role can be 'customer' or 'admin'. Default is 'customer'."
+					},
+					"response": [
+						{
+							"name": "Create Customer",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+1987654321\",\n  \"password\": \"MyPassword456!\",\n  \"role\": \"customer\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/users",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+1987654321\",\n  \"role\": \"customer\",\n  \"created_at\": \"2026-01-16T10:30:00Z\",\n  \"updated_at\": \"2026-01-16T10:30:00Z\"\n}"
+						},
+						{
+							"name": "Create Admin",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@pos.com\",\n  \"phone\": \"+1122334455\",\n  \"password\": \"AdminSecure789!\",\n  \"role\": \"admin\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/users",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 2,\n  \"name\": \"Admin User\",\n  \"email\": \"admin@pos.com\",\n  \"phone\": \"+1122334455\",\n  \"role\": \"admin\",\n  \"created_at\": \"2026-01-16T10:35:00Z\",\n  \"updated_at\": \"2026-01-16T10:35:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "List Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Retrieve a list of all users in the system"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/users",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "[\n  {\n    \"id\": 1,\n    \"name\": \"Jane Smith\",\n    \"email\": \"jane.smith@example.com\",\n    \"phone\": \"+1987654321\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-01-16T10:30:00Z\",\n    \"updated_at\": \"2026-01-16T10:30:00Z\"\n  },\n  {\n    \"id\": 2,\n    \"name\": \"Admin User\",\n    \"email\": \"admin@pos.com\",\n    \"phone\": \"+1122334455\",\n    \"role\": \"admin\",\n    \"created_at\": \"2026-01-16T10:35:00Z\",\n    \"updated_at\": \"2026-01-16T10:35:00Z\"\n  },\n  {\n    \"id\": 3,\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"+1234567890\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-01-16T11:00:00Z\",\n    \"updated_at\": \"2026-01-16T11:00:00Z\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
+						},
+						"description": "Retrieve a specific user by their ID"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/users/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phone\": \"+1987654321\",\n  \"role\": \"customer\",\n  \"addresses\": [\n    {\n      \"id\": 1,\n      \"name\": \"Home\",\n      \"country\": \"USA\",\n      \"governorate\": \"California\",\n      \"city\": \"Los Angeles\",\n      \"address\": \"123 Main St, Apt 4B\",\n      \"phone\": \"+1987654321\",\n      \"is_primary\": true\n    }\n  ],\n  \"orders\": [],\n  \"created_at\": \"2026-01-16T10:30:00Z\",\n  \"updated_at\": \"2026-01-16T10:30:00Z\"\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/users/999",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"999"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"error\": \"User not found\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jane Smith Updated\",\n  \"email\": \"jane.smith.updated@example.com\",\n  \"phone\": \"+1987654322\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"1"
+							]
+						},
+						"description": "Update an existing user's information"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Jane Smith Updated\",\n  \"email\": \"jane.smith.updated@example.com\",\n  \"phone\": \"+1987654322\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/users/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"name\": \"Jane Smith Updated\",\n  \"email\": \"jane.smith.updated@example.com\",\n  \"phone\": \"+1987654322\",\n  \"role\": \"customer\",\n  \"created_at\": \"2026-01-16T10:30:00Z\",\n  \"updated_at\": \"2026-01-16T14:20:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users/3",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"3"
+							]
+						},
+						"description": "Delete a user from the system"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/users/3",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"users",
+										"3"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"message\": \"User deleted successfully\"\n}"
+						}
+					]
+				}
+			],
+			"description": "All user-related endpoints for managing users in the POS system"
+		},
+		{
+			"name": "Products",
+			"item": [
+				{
+					"name": "Create Product",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Wireless Headphones\",\n  \"short_description\": \"High-quality wireless headphones with noise cancellation\",\n  \"description\": \"Premium wireless headphones featuring active noise cancellation, 30-hour battery life, and exceptional sound quality. Perfect for music lovers and professionals.\",\n  \"price\": 199.99,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 15,\n  \"discount_start_date\": \"2026-01-15T00:00:00Z\",\n  \"discount_end_date\": \"2026-01-31T23:59:59Z\",\n  \"image_url\": \"https://example.com/images/headphones.jpg\",\n  \"quantity\": 50\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Create a new product. Discount type can be 'fixed' or 'percent'."
+					},
+					"response": [
+						{
+							"name": "With Percentage Discount",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Wireless Headphones\",\n  \"short_description\": \"High-quality wireless headphones with noise cancellation\",\n  \"description\": \"Premium wireless headphones featuring active noise cancellation, 30-hour battery life, and exceptional sound quality.\",\n  \"price\": 199.99,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 15,\n  \"discount_start_date\": \"2026-01-15T00:00:00Z\",\n  \"discount_end_date\": \"2026-01-31T23:59:59Z\",\n  \"image_url\": \"https://example.com/images/headphones.jpg\",\n  \"quantity\": 50\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/products",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"products"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"name\": \"Wireless Headphones\",\n  \"short_description\": \"High-quality wireless headphones with noise cancellation\",\n  \"description\": \"Premium wireless headphones featuring active noise cancellation, 30-hour battery life, and exceptional sound quality.\",\n  \"price\": 199.99,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 15,\n  \"discount_start_date\": \"2026-01-15T00:00:00Z\",\n  \"discount_end_date\": \"2026-01-31T23:59:59Z\",\n  \"image_url\": \"https://example.com/images/headphones.jpg\",\n  \"quantity\": 50,\n  \"created_at\": \"2026-01-16T10:00:00Z\",\n  \"updated_at\": \"2026-01-16T10:00:00Z\"\n}"
+						},
+						{
+							"name": "With Fixed Discount",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Gaming Mouse\",\n  \"short_description\": \"Professional gaming mouse with RGB lighting\",\n  \"description\": \"High-precision gaming mouse with customizable RGB lighting, programmable buttons, and ergonomic design for extended gaming sessions.\",\n  \"price\": 79.99,\n  \"discount_type\": \"fixed\",\n  \"discount_value\": 10,\n  \"discount_start_date\": \"2026-01-16T00:00:00Z\",\n  \"discount_end_date\": \"2026-02-28T23:59:59Z\",\n  \"image_url\": \"https://example.com/images/gaming-mouse.jpg\",\n  \"quantity\": 100\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/products",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"products"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 2,\n  \"name\": \"Gaming Mouse\",\n  \"short_description\": \"Professional gaming mouse with RGB lighting\",\n  \"description\": \"High-precision gaming mouse with customizable RGB lighting, programmable buttons, and ergonomic design for extended gaming sessions.\",\n  \"price\": 79.99,\n  \"discount_type\": \"fixed\",\n  \"discount_value\": 10,\n  \"discount_start_date\": \"2026-01-16T00:00:00Z\",\n  \"discount_end_date\": \"2026-02-28T23:59:59Z\",\n  \"image_url\": \"https://example.com/images/gaming-mouse.jpg\",\n  \"quantity\": 100,\n  \"created_at\": \"2026-01-16T10:15:00Z\",\n  \"updated_at\": \"2026-01-16T10:15:00Z\"\n}"
+						},
+						{
+							"name": "Without Discount",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"name\": \"Mechanical Keyboard\",\n  \"short_description\": \"Premium mechanical keyboard\",\n  \"description\": \"Full-size mechanical keyboard with Cherry MX switches, aluminum frame, and customizable backlighting.\",\n  \"price\": 149.99,\n  \"discount_type\": \"\",\n  \"discount_value\": 0,\n  \"image_url\": \"https://example.com/images/keyboard.jpg\",\n  \"quantity\": 75\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/products",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"products"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 3,\n  \"name\": \"Mechanical Keyboard\",\n  \"short_description\": \"Premium mechanical keyboard\",\n  \"description\": \"Full-size mechanical keyboard with Cherry MX switches, aluminum frame, and customizable backlighting.\",\n  \"price\": 149.99,\n  \"discount_type\": \"\",\n  \"discount_value\": 0,\n  \"image_url\": \"https://example.com/images/keyboard.jpg\",\n  \"quantity\": 75,\n  \"created_at\": \"2026-01-16T10:20:00Z\",\n  \"updated_at\": \"2026-01-16T10:20:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "List Products",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products"
+							]
+						},
+						"description": "Retrieve a list of all products"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/products",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"products"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "[\n  {\n    \"id\": 1,\n    \"name\": \"Wireless Headphones\",\n    \"short_description\": \"High-quality wireless headphones with noise cancellation\",\n    \"description\": \"Premium wireless headphones featuring active noise cancellation, 30-hour battery life, and exceptional sound quality.\",\n    \"price\": 199.99,\n    \"discount_type\": \"percent\",\n    \"discount_value\": 15,\n    \"discount_start_date\": \"2026-01-15T00:00:00Z\",\n    \"discount_end_date\": \"2026-01-31T23:59:59Z\",\n    \"image_url\": \"https://example.com/images/headphones.jpg\",\n    \"quantity\": 50,\n    \"created_at\": \"2026-01-16T10:00:00Z\",\n    \"updated_at\": \"2026-01-16T10:00:00Z\"\n  },\n  {\n    \"id\": 2,\n    \"name\": \"Gaming Mouse\",\n    \"short_description\": \"Professional gaming mouse with RGB lighting\",\n    \"description\": \"High-precision gaming mouse with customizable RGB lighting, programmable buttons, and ergonomic design for extended gaming sessions.\",\n    \"price\": 79.99,\n    \"discount_type\": \"fixed\",\n    \"discount_value\": 10,\n    \"discount_start_date\": \"2026-01-16T00:00:00Z\",\n    \"discount_end_date\": \"2026-02-28T23:59:59Z\",\n    \"image_url\": \"https://example.com/images/gaming-mouse.jpg\",\n    \"quantity\": 100,\n    \"created_at\": \"2026-01-16T10:15:00Z\",\n    \"updated_at\": \"2026-01-16T10:15:00Z\"\n  },\n  {\n    \"id\": 3,\n    \"name\": \"Mechanical Keyboard\",\n    \"short_description\": \"Premium mechanical keyboard\",\n    \"description\": \"Full-size mechanical keyboard with Cherry MX switches, aluminum frame, and customizable backlighting.\",\n    \"price\": 149.99,\n    \"discount_type\": \"\",\n    \"discount_value\": 0,\n    \"image_url\": \"https://example.com/images/keyboard.jpg\",\n    \"quantity\": 75,\n    \"created_at\": \"2026-01-16T10:20:00Z\",\n    \"updated_at\": \"2026-01-16T10:20:00Z\"\n  }\n]"
+						}
+					]
+				},
+				{
+					"name": "Get Product",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/products/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"products",
+								"1"
+							]
+						},
+						"description": "Retrieve a specific product by ID"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/products/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"products",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"name\": \"Wireless Headphones\",\n  \"short_description\": \"High-quality wireless headphones with noise cancellation\",\n  \"description\": \"Premium wireless headphones featuring active noise cancellation, 30-hour battery life, and exceptional sound quality.\",\n  \"price\": 199.99,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 15,\n  \"discount_start_date\": \"2026-01-15T00:00:00Z\",\n  \"discount_end_date\": \"2026-01-31T23:59:59Z\",\n  \"image_url\": \"https://example.com/images/headphones.jpg\",\n  \"quantity\": 50,\n  \"created_at\": \"2026-01-16T10:00:00Z\",\n  \"updated_at\": \"2026-01-16T10:00:00Z\"\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/products/999",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"products",
+										"999"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"error\": \"Product not found\"\n}"
+						}
+					]
+				}
+			],
+			"description": "All product-related endpoints for managing products in the POS system"
+		},
+		{
+			"name": "Addresses",
+			"item": [
+				{
+					"name": "Add Address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": 1,\n  \"name\": \"Home\",\n  \"country\": \"USA\",\n  \"governorate\": \"California\",\n  \"city\": \"Los Angeles\",\n  \"address\": \"123 Main St, Apt 4B\",\n  \"phone\": \"+1987654321\",\n  \"is_primary\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/addresses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"addresses"
+							]
+						},
+						"description": "Add a new address for a user"
+					},
+					"response": [
+						{
+							"name": "Primary Address",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user_id\": 1,\n  \"name\": \"Home\",\n  \"country\": \"USA\",\n  \"governorate\": \"California\",\n  \"city\": \"Los Angeles\",\n  \"address\": \"123 Main St, Apt 4B\",\n  \"phone\": \"+1987654321\",\n  \"is_primary\": true\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/addresses",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"addresses"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"user_id\": 1,\n  \"name\": \"Home\",\n  \"country\": \"USA\",\n  \"governorate\": \"California\",\n  \"city\": \"Los Angeles\",\n  \"address\": \"123 Main St, Apt 4B\",\n  \"phone\": \"+1987654321\",\n  \"is_primary\": true,\n  \"created_at\": \"2026-01-16T11:00:00Z\",\n  \"updated_at\": \"2026-01-16T11:00:00Z\"\n}"
+						},
+						{
+							"name": "Secondary Address",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user_id\": 1,\n  \"name\": \"Work\",\n  \"country\": \"USA\",\n  \"governorate\": \"California\",\n  \"city\": \"San Francisco\",\n  \"address\": \"456 Office Blvd, Suite 200\",\n  \"phone\": \"+1987654322\",\n  \"is_primary\": false\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/addresses",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"addresses"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 2,\n  \"user_id\": 1,\n  \"name\": \"Work\",\n  \"country\": \"USA\",\n  \"governorate\": \"California\",\n  \"city\": \"San Francisco\",\n  \"address\": \"456 Office Blvd, Suite 200\",\n  \"phone\": \"+1987654322\",\n  \"is_primary\": false,\n  \"created_at\": \"2026-01-16T11:05:00Z\",\n  \"updated_at\": \"2026-01-16T11:05:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get User Addresses",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/addresses/user/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"addresses",
+								"user",
+								"1"
+							]
+						},
+						"description": "Retrieve all addresses for a specific user"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/addresses/user/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"addresses",
+										"user",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "[\n  {\n    \"id\": 1,\n    \"user_id\": 1,\n    \"name\": \"Home\",\n    \"country\": \"USA\",\n    \"governorate\": \"California\",\n    \"city\": \"Los Angeles\",\n    \"address\": \"123 Main St, Apt 4B\",\n    \"phone\": \"+1987654321\",\n    \"is_primary\": true,\n    \"created_at\": \"2026-01-16T11:00:00Z\",\n    \"updated_at\": \"2026-01-16T11:00:00Z\"\n  },\n  {\n    \"id\": 2,\n    \"user_id\": 1,\n    \"name\": \"Work\",\n    \"country\": \"USA\",\n    \"governorate\": \"California\",\n    \"city\": \"San Francisco\",\n    \"address\": \"456 Office Blvd, Suite 200\",\n    \"phone\": \"+1987654322\",\n    \"is_primary\": false,\n    \"created_at\": \"2026-01-16T11:05:00Z\",\n    \"updated_at\": \"2026-01-16T11:05:00Z\"\n  }\n]"
+						},
+						{
+							"name": "Empty Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/addresses/user/999",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"addresses",
+										"user",
+										"999"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "[]"
+						}
+					]
+				}
+			],
+			"description": "All address-related endpoints for managing user addresses"
+		},
+		{
+			"name": "Orders",
+			"item": [
+				{
+					"name": "Create Order",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"shipping_cost\": 10.00,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 5,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"price\": 199.99,\n      \"discount_type\": \"percent\",\n      \"discount_value\": 15\n    },\n    {\n      \"product_id\": 2,\n      \"quantity\": 1,\n      \"price\": 79.99,\n      \"discount_type\": \"fixed\",\n      \"discount_value\": 10\n    }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders"
+							]
+						},
+						"description": "Create a new order with items. The system will calculate subtotal and total automatically."
+					},
+					"response": [
+						{
+							"name": "With Order Discount",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"shipping_cost\": 10.00,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 5,\n  \"items\": [\n    {\n      \"product_id\": 1,\n      \"quantity\": 2,\n      \"price\": 199.99,\n      \"discount_type\": \"percent\",\n      \"discount_value\": 15\n    },\n    {\n      \"product_id\": 2,\n      \"quantity\": 1,\n      \"price\": 79.99,\n      \"discount_type\": \"fixed\",\n      \"discount_value\": 10\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/orders",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"status\": \"pending\",\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"subtotal\": 409.97,\n  \"shipping_cost\": 10.00,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 5,\n  \"total\": 399.47,\n  \"items\": [\n    {\n      \"id\": 1,\n      \"product_id\": 1,\n      \"order_id\": 1,\n      \"quantity\": 2,\n      \"price\": 199.99,\n      \"subtotal\": 399.98,\n      \"discount_type\": \"percent\",\n      \"discount_value\": 15,\n      \"total\": 339.98,\n      \"created_at\": \"2026-01-16T12:00:00Z\",\n      \"updated_at\": \"2026-01-16T12:00:00Z\"\n    },\n    {\n      \"id\": 2,\n      \"product_id\": 2,\n      \"order_id\": 1,\n      \"quantity\": 1,\n      \"price\": 79.99,\n      \"subtotal\": 79.99,\n      \"discount_type\": \"fixed\",\n      \"discount_value\": 10,\n      \"total\": 69.99,\n      \"created_at\": \"2026-01-16T12:00:00Z\",\n      \"updated_at\": \"2026-01-16T12:00:00Z\"\n    }\n  ],\n  \"created_at\": \"2026-01-16T12:00:00Z\",\n  \"updated_at\": \"2026-01-16T12:00:00Z\"\n}"
+						},
+						{
+							"name": "Without Order Discount",
+							"originalRequest": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"shipping_cost\": 15.00,\n  \"discount_type\": \"\",\n  \"discount_value\": 0,\n  \"items\": [\n    {\n      \"product_id\": 3,\n      \"quantity\": 1,\n      \"price\": 149.99,\n      \"discount_type\": \"\",\n      \"discount_value\": 0\n    }\n  ]\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/orders",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders"
+									]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 2,\n  \"status\": \"pending\",\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"subtotal\": 149.99,\n  \"shipping_cost\": 15.00,\n  \"discount_type\": \"\",\n  \"discount_value\": 0,\n  \"total\": 164.99,\n  \"items\": [\n    {\n      \"id\": 3,\n      \"product_id\": 3,\n      \"order_id\": 2,\n      \"quantity\": 1,\n      \"price\": 149.99,\n      \"subtotal\": 149.99,\n      \"discount_type\": \"\",\n      \"discount_value\": 0,\n      \"total\": 149.99,\n      \"created_at\": \"2026-01-16T13:00:00Z\",\n      \"updated_at\": \"2026-01-16T13:00:00Z\"\n    }\n  ],\n  \"created_at\": \"2026-01-16T13:00:00Z\",\n  \"updated_at\": \"2026-01-16T13:00:00Z\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Order By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/orders/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"1"
+							]
+						},
+						"description": "Retrieve a specific order with its items, user, and address information"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/orders/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"status\": \"pending\",\n  \"user_id\": 1,\n  \"user\": {\n    \"id\": 1,\n    \"name\": \"Jane Smith\",\n    \"email\": \"jane.smith@example.com\",\n    \"phone\": \"+1987654321\",\n    \"role\": \"customer\"\n  },\n  \"address_id\": 1,\n  \"address\": {\n    \"id\": 1,\n    \"name\": \"Home\",\n    \"country\": \"USA\",\n    \"governorate\": \"California\",\n    \"city\": \"Los Angeles\",\n    \"address\": \"123 Main St, Apt 4B\",\n    \"phone\": \"+1987654321\",\n    \"is_primary\": true\n  },\n  \"subtotal\": 409.97,\n  \"shipping_cost\": 10.00,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 5,\n  \"total\": 399.47,\n  \"items\": [\n    {\n      \"id\": 1,\n      \"product_id\": 1,\n      \"product\": {\n        \"id\": 1,\n        \"name\": \"Wireless Headphones\",\n        \"price\": 199.99,\n        \"image_url\": \"https://example.com/images/headphones.jpg\"\n      },\n      \"order_id\": 1,\n      \"quantity\": 2,\n      \"price\": 199.99,\n      \"subtotal\": 399.98,\n      \"discount_type\": \"percent\",\n      \"discount_value\": 15,\n      \"total\": 339.98\n    },\n    {\n      \"id\": 2,\n      \"product_id\": 2,\n      \"product\": {\n        \"id\": 2,\n        \"name\": \"Gaming Mouse\",\n        \"price\": 79.99,\n        \"image_url\": \"https://example.com/images/gaming-mouse.jpg\"\n      },\n      \"order_id\": 1,\n      \"quantity\": 1,\n      \"price\": 79.99,\n      \"subtotal\": 79.99,\n      \"discount_type\": \"fixed\",\n      \"discount_value\": 10,\n      \"total\": 69.99\n    }\n  ],\n  \"created_at\": \"2026-01-16T12:00:00Z\",\n  \"updated_at\": \"2026-01-16T12:00:00Z\"\n}"
+						},
+						{
+							"name": "Not Found",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/orders/999",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders",
+										"999"
+									]
+								}
+							},
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"error\": \"Order not found\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Order Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"status\": \"completed\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/orders/1/status",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"orders",
+								"1",
+								"status"
+							]
+						},
+						"description": "Update the status of an order. Valid statuses: pending, completed, cancelled"
+					},
+					"response": [
+						{
+							"name": "Update to Completed",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"completed\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/orders/1/status",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders",
+										"1",
+										"status"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 1,\n  \"status\": \"completed\",\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"subtotal\": 409.97,\n  \"shipping_cost\": 10.00,\n  \"discount_type\": \"percent\",\n  \"discount_value\": 5,\n  \"total\": 399.47,\n  \"created_at\": \"2026-01-16T12:00:00Z\",\n  \"updated_at\": \"2026-01-16T15:30:00Z\"\n}"
+						},
+						{
+							"name": "Update to Cancelled",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"cancelled\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/orders/2/status",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders",
+										"2",
+										"status"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"id\": 2,\n  \"status\": \"cancelled\",\n  \"user_id\": 1,\n  \"address_id\": 1,\n  \"subtotal\": 149.99,\n  \"shipping_cost\": 15.00,\n  \"discount_type\": \"\",\n  \"discount_value\": 0,\n  \"total\": 164.99,\n  \"created_at\": \"2026-01-16T13:00:00Z\",\n  \"updated_at\": \"2026-01-16T16:00:00Z\"\n}"
+						},
+						{
+							"name": "Invalid Status",
+							"originalRequest": {
+								"method": "PATCH",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"status\": \"invalid_status\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/orders/1/status",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"orders",
+										"1",
+										"status"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"error\": \"Invalid status. Valid values are: pending, completed, cancelled\"\n}"
+						}
+					]
+				}
+			],
+			"description": "All order-related endpoints for managing orders in the POS system"
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	]
+}

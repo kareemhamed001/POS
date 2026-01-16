@@ -1,0 +1,28 @@
+# Air tmp directory
+tmp/
+
+# Binary
+main
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# Environment files
+.env
+.env.local
+
+# OS
+.DS_Store
+
+/vendor/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/pgadmin-servers.json

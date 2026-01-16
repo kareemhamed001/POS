@@ -13,6 +13,7 @@ import (
 	"github.com/kareemhamed001/POS/internal/entity"
 	"github.com/kareemhamed001/POS/internal/repository/postgres"
 	"github.com/kareemhamed001/POS/internal/usecase"
+	"github.com/kareemhamed001/POS/pkg/jwt"
 	"github.com/kareemhamed001/POS/pkg/logger"
 )
 
@@ -70,10 +71,18 @@ func main() {
 	productUsecase := usecase.NewProductUsecase(productRepository)
 	productHandler := handler.NewProductHandler(productUsecase, validate)
 
-	routes.SetupUserRoutes(router, userHandler)
-	routes.SetupOrderRoutes(router, orderHandler)
-	routes.SetupAddressRoutes(router, addressHandler)
-	routes.SetupProductRoutes(router, productHandler)
+	// Initialize JWT Manager
+	jwtManager := jwt.NewJWTManager(config.JWTPrivateKey, config.JWTTokenDuration)
+
+	// Initialize Auth Handler
+	authHandler := handler.NewAuthHandler(logger.Get(), userUsecase, validate, jwtManager)
+
+	// Setup Routes
+	routes.SetupAuthRoutes(router, authHandler)
+	routes.SetupUserRoutes(router, userHandler, jwtManager)
+	routes.SetupOrderRoutes(router, orderHandler, jwtManager)
+	routes.SetupAddressRoutes(router, addressHandler, jwtManager)
+	routes.SetupProductRoutes(router, productHandler, jwtManager)
 
 	logger.Info("Starting Server on port " + strconv.Itoa(config.AppPort))
 	router.Run(":" + strconv.Itoa(config.AppPort))

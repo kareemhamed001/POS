@@ -9,11 +9,12 @@ import (
 )
 
 type mockUserRepository struct {
-	listUsersFn   func(ctx context.Context, search string, page, perPage int) (*[]entity.User, int, error) //int for total users for pagination
-	createUserFn  func(ctx context.Context, user *entity.User) error
-	getUserByIDFn func(ctx context.Context, id uint) (*entity.User, error)
-	updateUserFn  func(ctx context.Context, id uint, user *entity.User) error
-	deleteUserFn  func(ctx context.Context, id uint) error
+	listUsersFn      func(ctx context.Context, search string, page, perPage int) (*[]entity.User, int, error) //int for total users for pagination
+	createUserFn     func(ctx context.Context, user *entity.User) error
+	getUserByIDFn    func(ctx context.Context, id uint) (*entity.User, error)
+	getUserByEmailFn func(ctx context.Context, email string) (*entity.User, error)
+	updateUserFn     func(ctx context.Context, id uint, user *entity.User) error
+	deleteUserFn     func(ctx context.Context, id uint) error
 }
 
 func (m *mockUserRepository) ListUsers(ctx context.Context, search string, page, perPage int) (*[]entity.User, int, error) {
@@ -26,6 +27,10 @@ func (m *mockUserRepository) CreateUser(ctx context.Context, user *entity.User) 
 
 func (m *mockUserRepository) GetUserByID(ctx context.Context, id uint) (*entity.User, error) {
 	return m.getUserByIDFn(ctx, id)
+}
+
+func (m *mockUserRepository) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+	return m.getUserByEmailFn(ctx, email)
 }
 
 func (m *mockUserRepository) UpdateUser(ctx context.Context, id uint, user *entity.User) error {

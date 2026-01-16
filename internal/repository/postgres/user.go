@@ -74,6 +74,17 @@ func (u *UserRepository) GetUserByID(ctx context.Context, id uint) (*entity.User
 	}
 	return &user, nil
 }
+
+func (u *UserRepository) GetUserByEmail(ctx context.Context, email string) (*entity.User, error) {
+	user, err := gorm.G[entity.User](u.db).Where("email=?", email).First(ctx)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
 func (u *UserRepository) UpdateUser(ctx context.Context, id uint, user *entity.User) error {
 	rowsAffected, err := gorm.G[*entity.User](u.db).Where("id=?", id).Updates(ctx, user)
 	if err != nil {

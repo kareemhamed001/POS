@@ -13,3 +13,15 @@ type UpdateUserRequest struct {
 	Phone    *string `json:"phone" validate:"omitempty,egyptianphone"`
 	Password *string `json:"password" validate:"omitempty"`
 }
+
+type RegisterRequest struct {
+	Name     string `json:"name" validate:"required,min=2,max=50"`
+	Email    string `json:"email" validate:"required,email"`
+	Phone    string `json:"phone" validate:"required,egyptianphone"`
+	Password string `json:"password" validate:"required,min=6"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}

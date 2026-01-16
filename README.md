@@ -4,12 +4,15 @@ A production-ready RESTful API for a Point of Sale system built with Go, featuri
 
 ## 🎯 Features
 
+- **JWT Authentication**: Secure token-based authentication with registration and login endpoints
+- **Role-Based Authorization**: Admin and customer roles with role-specific middleware for protected endpoints
 - **User Management**: Create, read, update, and delete users with role-based access (customer/admin)
 - **Product Catalog**: Manage products with flexible pricing and discount strategies
 - **Order Processing**: Complete order lifecycle with item management and calculations
 - **Address Management**: Multi-address support for users with primary address designation
 - **Advanced Search**: Case-insensitive search across all resources with pagination
 - **Discount System**: Support for both fixed and percentage-based discounts at item and order levels
+- **Password Security**: Bcrypt hashing for secure password storage
 - **Global Logging**: Production-grade logging with Zap logger accessible throughout the application
 - **Hot Reload**: Air integration for rapid development without rebuilding
 - **Comprehensive Testing**: Unit tests with SQLite in-memory database isolation
@@ -21,6 +24,8 @@ A production-ready RESTful API for a Point of Sale system built with Go, featuri
 - **Framework**: Gin Web Framework
 - **Database**: PostgreSQL (production) / SQLite (testing)
 - **ORM**: GORM with generics
+- **Authentication**: JWT (golang-jwt/jwt/v5)
+- **Password Hashing**: bcrypt
 - **Validation**: go-playground/validator with custom validators
 - **Logging**: Uber Zap Logger
 - **Hot Reload**: Air
@@ -106,21 +111,103 @@ http://localhost:8081/api
 GET /health
 ```
 
+### Authentication Endpoints
+
+**Note**: Authentication is required for all endpoints except `/health`, `/auth/register`, and `/auth/login`.
+
+| Method | Endpoint         | Description                 |
+| ------ | ---------------- | --------------------------- |
+| POST   | `/auth/register` | Register a new user account |
+| POST   | `/auth/login`    | Login and get JWT token     |
+
+**Register Example:**
+
+```bash
+curl -X POST http://localhost:8081/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "phone": "+201234567890",
+    "password": "SecurePass123!"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "User registered successfully",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+201234567890",
+      "role": "customer"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+**Login Example:**
+
+```bash
+curl -X POST http://localhost:8081/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "john@example.com",
+    "password": "SecurePass123!"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "User logged in successfully",
+  "data": {
+    "user": {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "phone": "+201234567890",
+      "role": "customer"
+    },
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+**Using the JWT Token:**
+
+```bash
+# Add the token to the Authorization header for protected endpoints
+curl -X GET http://localhost:8081/api/users \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
 ### Users Endpoints
 
-| Method | Endpoint     | Description                               |
-| ------ | ------------ | ----------------------------------------- |
-| GET    | `/users`     | List all users with pagination and search |
-| POST   | `/users`     | Create a new user                         |
-| GET    | `/users/:id` | Get user by ID                            |
-| PUT    | `/users/:id` | Update user information                   |
-| DELETE | `/users/:id` | Delete a user                             |
+**Note**: All user endpoints require authentication. Creating and deleting users requires `admin` role.
+
+| Method | Endpoint     | Description                               | Required Role          |
+| ------ | ------------ | ----------------------------------------- | ---------------------- |
+| GET    | `/users`     | List all users with pagination and search | Any authenticated user |
+| POST   | `/users`     | Create a new user                         | Admin only             |
+| GET    | `/users/:id` | Get user by ID                            | Any authenticated user |
+| PUT    | `/users/:id` | Update user information                   | Any authenticated user |
+| DELETE | `/users/:id` | Delete a user                             | Admin only             |
 
 **Create User Example:**
 
 ```bash
 curl -X POST http://localhost:8081/api/users \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "name": "John Doe",
     "email": "john@example.com",
@@ -132,17 +219,20 @@ curl -X POST http://localhost:8081/api/users \
 
 ### Products Endpoints
 
-| Method | Endpoint        | Description          |
-| ------ | --------------- | -------------------- |
-| GET    | `/products`     | List all products    |
-| POST   | `/products`     | Create a new product |
-| GET    | `/products/:id` | Get product by ID    |
+**Note**: All product endpoints require authentication. Creating products requires `admin` role.
+
+| Method | Endpoint        | Description          | Required Role          |
+| ------ | --------------- | -------------------- | ---------------------- |
+| GET    | `/products`     | List all products    | Any authenticated user |
+| POST   | `/products`     | Create a new product | Admin only             |
+| GET    | `/products/:id` | Get product by ID    | Any authenticated user |
 
 **Create Product Example:**
 
 ```bash
 curl -X POST http://localhost:8081/api/products \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "name": "Wireless Headphones",
     "short_description": "High-quality wireless headphones",
@@ -157,24 +247,29 @@ curl -X POST http://localhost:8081/api/products \
 
 ### Addresses Endpoints
 
-| Method | Endpoint                   | Description                  |
-| ------ | -------------------------- | ---------------------------- |
-| POST   | `/addresses`               | Add a new address for a user |
-| GET    | `/addresses/user/:user_id` | Get all addresses for a user |
+**Note**: All address endpoints require authentication.
+
+| Method | Endpoint                   | Description                  | Required Role          |
+| ------ | -------------------------- | ---------------------------- | ---------------------- |
+| POST   | `/addresses`               | Add a new address for a user | Any authenticated user |
+| GET    | `/addresses/user/:user_id` | Get all addresses for a user | Any authenticated user |
 
 ### Orders Endpoints
 
-| Method | Endpoint             | Description                   |
-| ------ | -------------------- | ----------------------------- |
-| POST   | `/orders`            | Create a new order with items |
-| GET    | `/orders/:id`        | Get order with details        |
-| PATCH  | `/orders/:id/status` | Update order status           |
+**Note**: All order endpoints require authentication. Updating order status requires `admin` role.
+
+| Method | Endpoint             | Description                   | Required Role          |
+| ------ | -------------------- | ----------------------------- | ---------------------- |
+| POST   | `/orders`            | Create a new order with items | Any authenticated user |
+| GET    | `/orders/:id`        | Get order with details        | Any authenticated user |
+| PATCH  | `/orders/:id/status` | Update order status           | Admin only             |
 
 **Create Order Example:**
 
 ```bash
 curl -X POST http://localhost:8081/api/orders \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -d '{
     "user_id": 1,
     "address_id": 1,
@@ -197,8 +292,7 @@ curl -X POST http://localhost:8081/api/orders \
 
 ```bash
 curl -X PATCH http://localhost:8081/api/orders/1/status \
-  -H "Content-Type: application/json" \
-  -d '{"status": "completed"}'
+  -H "Content-Type: application/json" \  -H "Authorization: Bearer YOUR_JWT_TOKEN" \  -d '{"status": "completed"}'
 ```
 
 Valid statuses: `pending`, `completed`, `cancelled`
@@ -296,7 +390,7 @@ Create a `.env` file in the project root:
 
 ```env
 APP_ENV=development
-PORT=8081
+APP_PORT=8081
 
 DB_DRIVER=postgres
 DB_HOST=postgres
@@ -305,8 +399,17 @@ DB_USER=admin
 DB_PASSWORD=admin
 DB_NAME=pos_db
 
-JWT_PRIVATE_KEY=your-secret-key
+JWT_PRIVATE_KEY=your-super-secret-jwt-key-change-this-in-production
+JWT_TOKEN_DURATION=24
 ```
+
+**Environment Variables Explained:**
+
+- `APP_ENV`: Environment (development/production)
+- `APP_PORT`: Server port
+- `DB_*`: Database connection settings
+- `JWT_PRIVATE_KEY`: Secret key for signing JWT tokens (change in production!)
+- `JWT_TOKEN_DURATION`: Token expiration time in hours (default: 24)
 
 ## 🔧 Configuration
 
@@ -398,7 +501,8 @@ Contributions are welcome! Please follow these steps:
 
 ## 📈 Future Enhancements
 
-- [ ] Authentication & Authorization (JWT)
+- [x] Authentication & Authorization (JWT) ✅ **Completed**
+- [x] Role-based access control (Admin/Customer) ✅ **Completed**
 - [ ] Redis caching layer
 - [ ] Advanced reporting and analytics
 - [ ] Inventory management
@@ -406,6 +510,8 @@ Contributions are welcome! Please follow these steps:
 - [ ] Real-time notifications
 - [ ] GraphQL API support
 - [ ] API rate limiting
+- [ ] Refresh token mechanism
+- [ ] Email verification for new users
 
 ## 👤 Author
 

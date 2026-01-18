@@ -53,3 +53,14 @@ func (r *ProductRepository) ListProducts(ctx context.Context) ([]entity.Product,
 	}
 	return products, nil
 }
+
+func (r *ProductRepository) DeleteProduct(ctx context.Context, id uint) error {
+	rowsAffected, err := gorm.G[entity.Product](r.db).Where("id = ?", id).Delete(ctx)
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return ErrProductNotFound
+	}
+	return nil
+}

@@ -3,100 +3,239 @@ package usecase
 import (
 	"context"
 	"errors"
+	"sync"
 	"time"
 
 	"github.com/kareemhamed001/POS/internal/entity"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type OrderUsecase struct {
 	orderRepo   OrderRepository
 	productRepo ProductRepository
+	tracer      trace.Tracer
 }
 
 func NewOrderUsecase(orderRepo OrderRepository, productRepo ProductRepository) *OrderUsecase {
 	return &OrderUsecase{
 		orderRepo:   orderRepo,
 		productRepo: productRepo,
+		tracer:      otel.Tracer("order-usecase"),
 	}
 }
 
 func (u *OrderUsecase) CreateOrder(ctx context.Context, order *entity.Order) error {
-	var subTotal float32
-	now := time.Now()
+	ctx, span := u.tracer.Start(ctx, "OrderUsecase.CreateOrder")
+	defer span.End()
 
+	span.SetAttributes(
+		attribute.Int("order.items.count", len(order.Items)),
+	)
+
+	// Fetch all products at once (batch operation)
+	fetchCtx, fetchSpan := u.tracer.Start(ctx, "FetchAllProducts")
+	productIDs := make([]uint, len(order.Items))
 	for i := range order.Items {
-		item := &order.Items[i]
-		product, err := u.productRepo.GetProductByID(ctx, item.ProductID)
-		if err != nil {
-			return err
-		}
+		productIDs[i] = order.Items[i].ProductID
+	}
 
-		if product.Quantity < item.Quantity {
-			return errors.New("insufficient stock for product: " + product.Name)
-		}
+	products, err := u.productRepo.GetProductsByIDs(fetchCtx, productIDs)
+	fetchSpan.End()
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
 
-		// Set base price from product
-		item.Price = product.Price
-		item.SubTotal = item.Price * float32(item.Quantity)
+	// Create map for quick product lookup
+	productMap := make(map[uint]*entity.Product)
+	for i := range products {
+		productMap[products[i].ID] = &products[i]
+	}
 
-		// Apply product-level discount if active and not overridden by item-level discount
-		// (Or we could decide to always use product discount if available)
-		if item.DiscountValue == 0 && product.DiscountValue > 0 {
-			discountActive := true
-			if product.DiscountStartDate != nil && now.Before(*product.DiscountStartDate) {
-				discountActive = false
-			}
-			if product.DiscountEndDate != nil && now.After(*product.DiscountEndDate) {
-				discountActive = false
-			}
+	// Track quantity deductions per product
+	quantityDeductions := make(map[uint]int)
+	
+	// Process items in parallel for calculations
+	itemCalcCtx, itemCalcSpan := u.tracer.Start(ctx, "ProcessOrderItemsParallel")
+	processErr := u.processOrderItemsParallel(itemCalcCtx, order, productMap, quantityDeductions)
+	itemCalcSpan.End()
+	if processErr != nil {
+		span.RecordError(processErr)
+		span.SetStatus(codes.Error, processErr.Error())
+		return processErr
+	}
 
-			if discountActive {
-				item.DiscountType = product.DiscountType
-				item.DiscountValue = product.DiscountValue
-			}
-		}
-
-		// Calculate item total after discount
-		itemTotal := item.SubTotal
-		if item.DiscountType == entity.DiscountFixed {
-			itemTotal -= item.DiscountValue
-		} else if item.DiscountType == entity.DiscountPercent {
-			itemTotal -= item.SubTotal * (item.DiscountValue / 100)
-		}
-
-		// Ensure total doesn't go negative
-		if itemTotal < 0 {
-			itemTotal = 0
-		}
-
-		item.Total = itemTotal
-		subTotal += itemTotal
-
-		// Deduct stock
-		product.Quantity -= item.Quantity
-		if err := u.productRepo.UpdateProduct(ctx, product.ID, product); err != nil {
-			return err
+	// Apply deductions to products
+	for productID, deduction := range quantityDeductions {
+		if product, exists := productMap[productID]; exists {
+			product.Quantity -= deduction
 		}
 	}
 
+	// Calculate order subtotal
+	var subTotal float32
+	for _, item := range order.Items {
+		subTotal += item.Total
+	}
+
+	// Calculate order totals
+	_, orderCalcSpan := u.tracer.Start(ctx, "CalculateOrderTotals")
 	order.SubTotal = subTotal
 
-	// Order level discount
 	finalTotal := subTotal + order.ShippingCost
 	if order.DiscountType == entity.DiscountFixed {
+		orderCalcSpan.SetAttributes(attribute.String("order.discount.type", "fixed"))
 		finalTotal -= order.DiscountValue
 	} else if order.DiscountType == entity.DiscountPercent {
+		orderCalcSpan.SetAttributes(attribute.String("order.discount.type", "percent"))
 		finalTotal -= finalTotal * (order.DiscountValue / 100)
 	}
 
 	if finalTotal < 0 {
+		orderCalcSpan.SetAttributes(attribute.String("order.total.adjustment", "set to zero from negative"))
 		finalTotal = 0
 	}
 
 	order.Total = finalTotal
 	order.Status = entity.StatusPending
+	orderCalcSpan.End()
 
-	return u.orderRepo.CreateOrder(ctx, order)
+	// Update all product stock in batch
+	updateCtx, updateSpan := u.tracer.Start(ctx, "UpdateProductStock")
+	updatedProducts := make([]*entity.Product, 0, len(productMap))
+	for _, product := range productMap {
+		updatedProducts = append(updatedProducts, product)
+	}
+
+	// Update products sequentially to avoid race conditions
+	for _, product := range updatedProducts {
+		if err := u.productRepo.UpdateProduct(updateCtx, product.ID, product); err != nil {
+			updateSpan.RecordError(err)
+			updateSpan.SetStatus(codes.Error, err.Error())
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
+			return err
+		}
+	}
+	updateSpan.End()
+
+	// Create order
+	err = u.orderRepo.CreateOrder(ctx, order)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// processOrderItemsParallel processes order items concurrently for calculations
+func (u *OrderUsecase) processOrderItemsParallel(ctx context.Context, order *entity.Order, productMap map[uint]*entity.Product, quantityDeductions map[uint]int) error {
+	now := time.Now()
+	var mu sync.Mutex
+	var processErr error
+	var wg sync.WaitGroup
+
+	for i := range order.Items {
+		wg.Add(1)
+		go func(index int) {
+			defer wg.Done()
+
+			// Create span for this goroutine
+			_, itemSpan := u.tracer.Start(ctx, "ProcessOrderItem")
+			defer itemSpan.End()
+
+			itemSpan.SetAttributes(
+				attribute.Int("item.index", index),
+				attribute.Int("item.product_id", int(order.Items[index].ProductID)),
+				attribute.Int("item.quantity", order.Items[index].Quantity),
+			)
+
+			item := &order.Items[index]
+			
+			mu.Lock()
+			product, exists := productMap[item.ProductID]
+			// Calculate total deductions for this product so far
+			totalDeductions := quantityDeductions[item.ProductID]
+			mu.Unlock()
+
+			// Handle missing product
+			if !exists {
+				err := errors.New("product not found: " + string(rune(item.ProductID)))
+				mu.Lock()
+				processErr = err
+				mu.Unlock()
+				itemSpan.RecordError(err)
+				itemSpan.SetStatus(codes.Error, err.Error())
+				return
+			}
+
+			// Check stock (original quantity minus already planned deductions)
+			availableStock := product.Quantity - totalDeductions
+			if availableStock < item.Quantity {
+				err := errors.New("insufficient stock for product: " + product.Name)
+				mu.Lock()
+				processErr = err
+				mu.Unlock()
+				itemSpan.RecordError(err)
+				itemSpan.SetStatus(codes.Error, err.Error())
+				return
+			}
+
+			// Set base price from product
+			item.Price = product.Price
+			item.SubTotal = item.Price * float32(item.Quantity)
+
+			// Apply product-level discount if active and not overridden by item-level discount
+			if item.DiscountValue == 0 && product.DiscountValue > 0 {
+				discountActive := true
+				if product.DiscountStartDate != nil && now.Before(*product.DiscountStartDate) {
+					itemSpan.SetAttributes(attribute.String("discount.status", "not started"))
+					discountActive = false
+				}
+				if product.DiscountEndDate != nil && now.After(*product.DiscountEndDate) {
+					itemSpan.SetAttributes(attribute.String("discount.status", "expired"))
+					discountActive = false
+				}
+
+				if discountActive {
+					item.DiscountType = product.DiscountType
+					item.DiscountValue = product.DiscountValue
+				}
+			}
+
+			// Calculate item total after discount
+			itemTotal := item.SubTotal
+			if item.DiscountType == entity.DiscountFixed {
+				itemTotal -= item.DiscountValue
+			} else if item.DiscountType == entity.DiscountPercent {
+				itemTotal -= item.SubTotal * (item.DiscountValue / 100)
+			}
+
+			// Ensure total doesn't go negative
+			if itemTotal < 0 {
+				itemSpan.SetAttributes(attribute.String("item.total.adjustment", "set to zero from negative"))
+				itemTotal = 0
+			}
+
+			item.Total = itemTotal
+
+			// Track stock deduction
+			mu.Lock()
+			quantityDeductions[item.ProductID] += item.Quantity
+			mu.Unlock()
+
+			itemSpan.SetStatus(codes.Ok, "item processed successfully")
+		}(i)
+	}
+
+	wg.Wait()
+	return processErr
 }
 
 func (u *OrderUsecase) GetOrder(ctx context.Context, id uint) (*entity.Order, error) {
@@ -118,7 +257,8 @@ func (u *OrderUsecase) UpdateStatus(ctx context.Context, id uint, status entity.
 				continue
 			}
 			product.Quantity += item.Quantity
-			u.productRepo.UpdateProduct(ctx, product.ID, product)
+			if err := u.productRepo.UpdateProduct(ctx, product.ID, product); err != nil {
+			}
 		}
 	}
 

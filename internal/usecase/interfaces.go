@@ -39,15 +39,16 @@ type OrderItemRepository interface {
 type ProductRepository interface {
 	CreateProduct(ctx context.Context, product *entity.Product) error
 	GetProductByID(ctx context.Context, id uint) (*entity.Product, error)
+	GetProductsByIDs(ctx context.Context, ids []uint) ([]entity.Product, error)
 	UpdateProduct(ctx context.Context, id uint, product *entity.Product) error
-	ListProducts(ctx context.Context) ([]entity.Product, error)
+	ListProducts(ctx context.Context, page, perPage int) ([]entity.Product, int, error)
 	DeleteProduct(ctx context.Context, id uint) error
 }
 
 type ProductUsecaseInterface interface {
 	CreateProduct(ctx context.Context, product *entity.Product) error
 	GetProductByID(ctx context.Context, id uint) (*entity.Product, error)
-	ListProducts(ctx context.Context) ([]entity.Product, error)
+	ListProducts(ctx context.Context, page, perPage int) ([]entity.Product, int, error)
 	UpdateProduct(ctx context.Context, id uint, product *entity.Product) error
 	DeleteProduct(ctx context.Context, id uint) error
 	RestockProduct(ctx context.Context, id uint, quantity int) error

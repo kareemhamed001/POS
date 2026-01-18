@@ -11,7 +11,7 @@ import (
 type mockProductRepository struct {
 	createProductFn  func(ctx context.Context, product *entity.Product) error
 	getProductByIDFn func(ctx context.Context, id uint) (*entity.Product, error)
-	listProductsFn   func(ctx context.Context) ([]entity.Product, error)
+	listProductsFn   func(ctx context.Context, page, perPage int) ([]entity.Product, int, error)
 	updateProductFn  func(ctx context.Context, id uint, product *entity.Product) error
 	deleteProductFn  func(ctx context.Context, id uint) error
 }
@@ -24,8 +24,12 @@ func (m *mockProductRepository) GetProductByID(ctx context.Context, id uint) (*e
 	return m.getProductByIDFn(ctx, id)
 }
 
-func (m *mockProductRepository) ListProducts(ctx context.Context) ([]entity.Product, error) {
-	return m.listProductsFn(ctx)
+func (m *mockProductRepository) GetProductsByIDs(ctx context.Context, ids []uint) ([]entity.Product, error) {
+	return nil, nil // Not needed for product usecase tests
+}
+
+func (m *mockProductRepository) ListProducts(ctx context.Context, page, perPage int) ([]entity.Product, int, error) {
+	return m.listProductsFn(ctx, page, perPage)
 }
 
 func (m *mockProductRepository) UpdateProduct(ctx context.Context, id uint, product *entity.Product) error {
@@ -113,16 +117,21 @@ func TestProductUsecase_ListProducts(t *testing.T) {
 
 	t.Run("success", func(t *testing.T) {
 		expectedProducts := []entity.Product{{Name: "P1"}, {Name: "P2"}}
-		mockRepo.listProductsFn = func(ctx context.Context) ([]entity.Product, error) {
-			return expectedProducts, nil
+		mockRepo.listProductsFn = func(ctx context.Context, page, perPage int) ([]entity.Product, int, error) {
+			return expectedProducts, 2, nil
 		}
+		page := 1
+		perPage := 10
 
-		products, err := usecase.ListProducts(ctx)
+		products, total, err := usecase.ListProducts(ctx, page, perPage)
 		if err != nil {
 			t.Fatalf("expected nil error, got %v", err)
 		}
-		if len(products) != 2 {
-			t.Fatalf("expected 2 products, got %d", len(products))
+		if total != 2 {
+			t.Fatalf("expected 2 products, got %d", total)
+		}
+		if len(products) != len(expectedProducts) {
+			t.Fatalf("expected products %v, got %v", expectedProducts, products)
 		}
 	})
 }

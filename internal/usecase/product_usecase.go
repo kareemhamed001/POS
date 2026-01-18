@@ -121,59 +121,28 @@ func (u *ProductUsecase) GetProductByID(ctx context.Context, id uint) (*entity.P
 	return product, nil
 }
 
-func (u *ProductUsecase) ListProducts(ctx context.Context) ([]entity.Product, error) {
+func (u *ProductUsecase) ListProducts(ctx context.Context, page, perPage int) ([]entity.Product, int, error) {
 	ctx, span := u.tracer.Start(ctx, "ProductUsecase.ListProducts")
 	defer span.End()
 
-	// Try cache first
-	_, cacheSpan := u.tracer.Start(ctx, "Cache.GetProductList")
-	products, err := u.productCache.GetProductList(ctx, "all")
-	if err == nil {
-		cacheSpan.SetAttributes(
-			attribute.Bool("cache.hit", true),
-			attribute.Int("products.count", len(products)),
-		)
-		cacheSpan.End()
-		logger.Debug("Product list cache hit")
-		span.SetAttributes(
-			attribute.Bool("cache.hit", true),
-			attribute.Int("products.count", len(products)),
-		)
-		span.SetStatus(codes.Ok, "Products found in cache")
-		return products, nil
-	}
-	cacheSpan.SetAttributes(attribute.Bool("cache.hit", false))
-	cacheSpan.End()
-
-	// Cache miss - fetch from DB
-	logger.Debug("Product list cache miss, fetching from DB")
 	_, dbSpan := u.tracer.Start(ctx, "Database.ListProducts")
-	products, err = u.productRepo.ListProducts(ctx)
+	products, total, err := u.productRepo.ListProducts(ctx, page, perPage)
 	if err != nil {
 		dbSpan.RecordError(err)
 		dbSpan.SetStatus(codes.Error, err.Error())
 		dbSpan.End()
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
-		return nil, err
+		return nil, 0, err
 	}
 	dbSpan.SetAttributes(attribute.Int("products.count", len(products)))
 	dbSpan.End()
 
-	// Store in cache (fire and forget)
-	_, setCacheSpan := u.tracer.Start(ctx, "Cache.SetProductList")
-	if err := u.productCache.SetProductList(ctx, "all", products, productListCacheTTL); err != nil {
-		setCacheSpan.RecordError(err)
-		logger.Warnf("Failed to cache product list: %v", err)
-	}
-	setCacheSpan.End()
-
 	span.SetAttributes(
-		attribute.Bool("cache.hit", false),
 		attribute.Int("products.count", len(products)),
 	)
 	span.SetStatus(codes.Ok, "Products retrieved from database")
-	return products, nil
+	return products, total, nil
 }
 
 func (u *ProductUsecase) UpdateProduct(ctx context.Context, id uint, product *entity.Product) error {

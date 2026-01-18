@@ -2,9 +2,12 @@ package logger
 
 import (
 	"log"
+	"os"
 	"sync"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type Logger struct {
@@ -19,19 +22,26 @@ var (
 func New(env string) *Logger {
 	var (
 		base *zap.Logger
-		err  error
 	)
 
-	if env == "production" {
-		base, err = zap.NewProduction()
-	} else {
-		base, err = zap.NewDevelopment()
+	encoderConfig := zap.NewProductionEncoderConfig()
+	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderConfig.ConsoleSeparator = " | "
+
+	lumberjackLogger := &lumberjack.Logger{
+		Filename:   "system.log",
+		MaxSize:    10,   // Megabytes
+		MaxBackups: 3,    // Keep 3 old files
+		MaxAge:     28,   // Days
+		Compress:   true, // Gzip old logs
 	}
 
-	if err != nil {
-		log.Printf("failed to create logger: %v", err)
-		base = zap.NewExample()
-	}
+	core := zapcore.NewTee(
+		zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig), zapcore.AddSync(lumberjackLogger), zap.InfoLevel),
+		zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), zapcore.AddSync(os.Stdout), zap.DebugLevel),
+	)
+
+	base = zap.New(core)
 
 	return &Logger{base.Sugar()}
 }

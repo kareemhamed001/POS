@@ -30,8 +30,8 @@ func New(env string) *Logger {
 
 	lumberjackLogger := &lumberjack.Logger{
 		Filename:   "system.log",
-		MaxSize:    10,   // Megabytes
-		MaxBackups: 3,    // Keep 3 old files
+		MaxSize:    2,    // Megabytes
+		MaxBackups: 10,   // Keep 3 old files
 		MaxAge:     28,   // Days
 		Compress:   true, // Gzip old logs
 	}

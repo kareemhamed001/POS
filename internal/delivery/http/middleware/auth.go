@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/kareemhamed001/POS/internal/cache"
 	"github.com/kareemhamed001/POS/pkg/jwt"
 )
 
@@ -16,7 +17,7 @@ const (
 )
 
 // Auth middleware verifies JWT token from Authorization header
-func Auth(jwtManager *jwt.JWTManager) gin.HandlerFunc {
+func Auth(jwtManager *jwt.JWTManager, tokenCache cache.TokenCache) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader == "" {
@@ -40,6 +41,16 @@ func Auth(jwtManager *jwt.JWTManager) gin.HandlerFunc {
 		}
 
 		token := parts[1]
+
+		// Check if token is blacklisted
+		if blacklisted, err := tokenCache.IsTokenBlacklisted(ctx, token); err == nil && blacklisted {
+			ctx.JSON(http.StatusUnauthorized, gin.H{
+				"success": false,
+				"message": "token has been revoked",
+			})
+			ctx.Abort()
+			return
+		}
 
 		// Verify token
 		claims, err := jwtManager.Verify(token)

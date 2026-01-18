@@ -21,11 +21,31 @@ type Config struct {
 	MongoDBUri       string
 	JWTPrivateKey    string
 	JWTTokenDuration time.Duration
+	AdminName        string
+	AdminEmail       string
+	AdminPhone       string
+	AdminPassword    string
+	RedisHost        string
+	RedisPort        string
+	RedisPassword    string
+	RedisDB          int
+	RedisEnabled     bool
+	// File Storage
+	StorageType      string
+	StorageLocalPath string
+	StorageLocalURL  string
+	S3Bucket         string
+	S3Region         string
+	S3AccessKey      string
+	S3SecretKey      string
+	S3Endpoint       string
+	S3BaseURL        string
+	S3ACL            string
 }
 
 func NewConfig() *Config {
 	if err := godotenv.Load(); err != nil {
-		log.Println("Warning: .env file not found, using system environment variables")
+		log.Println("Warning: .env  file not found, using system environment variables")
 	}
 
 	return &Config{
@@ -40,6 +60,26 @@ func NewConfig() *Config {
 		MongoDBUri:       getEnvString("MONGO_DB_URI", "mongodb://admin:admin@localhost:27017/faq_db"),
 		JWTPrivateKey:    getEnvString("JWT_PRIVATE_KEY", "your_jwt_private_key"),
 		JWTTokenDuration: time.Duration(getEnvInt("JWT_TOKEN_DURATION", 24)) * time.Hour,
+		AdminName:        getEnvString("ADMIN_NAME", "Admin"),
+		AdminEmail:       getEnvString("ADMIN_EMAIL", "admin@example.com"),
+		AdminPhone:       getEnvString("ADMIN_PHONE", "+201000000000"),
+		AdminPassword:    getEnvString("ADMIN_PASSWORD", "Admin123!"),
+		RedisHost:        getEnvString("REDIS_HOST", "localhost"),
+		RedisPort:        getEnvString("REDIS_PORT", "6379"),
+		RedisPassword:    getEnvString("REDIS_PASSWORD", ""),
+		RedisDB:          getEnvInt("REDIS_DB", 0),
+		RedisEnabled:     getEnvBool("REDIS_ENABLED", true),
+		// File Storage
+		StorageType:      getEnvString("STORAGE_TYPE", "local"),
+		StorageLocalPath: getEnvString("STORAGE_LOCAL_PATH", "uploads"),
+		StorageLocalURL:  getEnvString("STORAGE_LOCAL_URL", "/uploads"),
+		S3Bucket:         getEnvString("S3_BUCKET", ""),
+		S3Region:         getEnvString("S3_REGION", "us-east-1"),
+		S3AccessKey:      getEnvString("S3_ACCESS_KEY", ""),
+		S3SecretKey:      getEnvString("S3_SECRET_KEY", ""),
+		S3Endpoint:       getEnvString("S3_ENDPOINT", ""),
+		S3BaseURL:        getEnvString("S3_BASE_URL", ""),
+		S3ACL:            getEnvString("S3_ACL", "public-read"),
 	}
 }
 

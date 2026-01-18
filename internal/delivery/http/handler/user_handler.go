@@ -9,7 +9,7 @@ import (
 	"github.com/kareemhamed001/POS/internal/delivery/http/helper"
 	"github.com/kareemhamed001/POS/internal/delivery/http/request"
 	"github.com/kareemhamed001/POS/internal/delivery/http/response"
-	validation "github.com/kareemhamed001/POS/internal/delivery/http/validator"
+	validation "github.com/kareemhamed001/POS/internal/delivery/http/validation"
 	"github.com/kareemhamed001/POS/internal/entity"
 	"github.com/kareemhamed001/POS/pkg/logger"
 

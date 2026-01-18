@@ -9,8 +9,9 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
-	validation "github.com/kareemhamed001/POS/internal/delivery/http/validator"
+	validation "github.com/kareemhamed001/POS/internal/delivery/http/validation"
 	"github.com/kareemhamed001/POS/internal/entity"
+	"github.com/kareemhamed001/POS/pkg/file"
 )
 
 type mockProductUsecase struct {
@@ -19,6 +20,7 @@ type mockProductUsecase struct {
 	listProductsFn   func(ctx context.Context) ([]entity.Product, error)
 	updateProductFn  func(ctx context.Context, id uint, product *entity.Product) error
 	restockProductFn func(ctx context.Context, id uint, quantity int) error
+	deleteProductFn  func(ctx context.Context, id uint) error
 }
 
 func (m *mockProductUsecase) CreateProduct(ctx context.Context, product *entity.Product) error {
@@ -36,12 +38,16 @@ func (m *mockProductUsecase) UpdateProduct(ctx context.Context, id uint, product
 func (m *mockProductUsecase) RestockProduct(ctx context.Context, id uint, quantity int) error {
 	return m.restockProductFn(ctx, id, quantity)
 }
+func (m *mockProductUsecase) DeleteProduct(ctx context.Context, id uint) error {
+	return m.deleteProductFn(ctx, id)
+}
 
 func TestProductHandler_CreateProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockUsecase := &mockProductUsecase{}
 	v := validation.NewValidator()
-	handler := NewProductHandler(mockUsecase, v)
+	mockFileStorage := file.NewLocalStorage(file.StorageConfig{LocalBasePath: "test_uploads", LocalBaseURL: "/uploads"})
+	handler := NewProductHandler(mockUsecase, v, mockFileStorage)
 
 	t.Run("success", func(t *testing.T) {
 		product := entity.Product{Name: "Test Product"}
@@ -82,7 +88,8 @@ func TestProductHandler_GetProduct(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	mockUsecase := &mockProductUsecase{}
 	v := validation.NewValidator()
-	handler := NewProductHandler(mockUsecase, v)
+	mockFileStorage := file.NewLocalStorage(file.StorageConfig{LocalBasePath: "test_uploads", LocalBaseURL: "/uploads"})
+	handler := NewProductHandler(mockUsecase, v, mockFileStorage)
 
 	t.Run("success", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodGet, "/products/1", nil)

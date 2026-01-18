@@ -2,9 +2,12 @@ package handler
 
 import (
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
+	"github.com/kareemhamed001/POS/internal/cache"
 	"github.com/kareemhamed001/POS/internal/delivery/http/helper"
 	"github.com/kareemhamed001/POS/internal/delivery/http/request"
 	"github.com/kareemhamed001/POS/internal/entity"
@@ -18,6 +21,7 @@ type AuthHandler struct {
 	userUsecase *usecase.UserUsecase
 	validate    *validator.Validate
 	jwtManager  *jwt.JWTManager
+	tokenCache  cache.TokenCache
 }
 
 func NewAuthHandler(
@@ -25,12 +29,14 @@ func NewAuthHandler(
 	userUsecase *usecase.UserUsecase,
 	validate *validator.Validate,
 	jwtManager *jwt.JWTManager,
+	tokenCache cache.TokenCache,
 ) *AuthHandler {
 	return &AuthHandler{
 		logger:      log,
 		userUsecase: userUsecase,
 		validate:    validate,
 		jwtManager:  jwtManager,
+		tokenCache:  tokenCache,
 	}
 }
 
@@ -134,5 +140,49 @@ func (a *AuthHandler) Login(ctx *gin.Context) {
 			},
 			"token": token,
 		},
+	})
+}
+
+// Logout invalidates the user's JWT token
+func (a *AuthHandler) Logout(ctx *gin.Context) {
+	authHeader := ctx.GetHeader("Authorization")
+	if authHeader == "" {
+		helper.WriteError(ctx, http.StatusBadRequest, "MISSING_TOKEN", "authorization header required")
+		return
+	}
+
+	// Extract token from "Bearer <token>"
+	parts := strings.Split(authHeader, " ")
+	if len(parts) != 2 || parts[0] != "Bearer" {
+		helper.WriteError(ctx, http.StatusBadRequest, "INVALID_TOKEN_FORMAT", "invalid authorization header format")
+		return
+	}
+
+	token := parts[1]
+
+	// Verify token to get expiration
+	claims, err := a.jwtManager.Verify(token)
+	if err != nil {
+		helper.WriteError(ctx, http.StatusUnauthorized, "INVALID_TOKEN", "invalid or expired token")
+		return
+	}
+
+	// Calculate remaining TTL
+	ttl := time.Until(claims.ExpiresAt.Time)
+	if ttl < 0 {
+		helper.WriteError(ctx, http.StatusUnauthorized, "TOKEN_EXPIRED", "token already expired")
+		return
+	}
+
+	// Blacklist the token
+	if err := a.tokenCache.BlacklistToken(ctx, token, ttl); err != nil {
+		a.logger.Errorf("Failed to blacklist token: %v", err)
+		helper.WriteError(ctx, http.StatusInternalServerError, "LOGOUT_FAILED", "failed to logout")
+		return
+	}
+
+	ctx.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Logged out successfully",
 	})
 }

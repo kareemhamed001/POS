@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/kareemhamed001/POS/pkg/logger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/jaeger"
@@ -60,6 +61,7 @@ func getSampler() trace.Sampler {
 	env := getEnv("APP_ENV", "development")
 	if env == "production" {
 		// Sample 20% of traces in production
+		logger.Info("Using TraceIDRatioBased sampler with 20% sampling rate for production environment")
 		return trace.ParentBased(trace.TraceIDRatioBased(0.2))
 	}
 	// Sample all traces in development

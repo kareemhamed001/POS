@@ -37,7 +37,15 @@ func (h *ProductHandler) ListProducts(ctx *gin.Context) {
 	reqCtx, span := h.tracer.Start(ctx.Request.Context(), "ProductHandler.ListProducts")
 	defer span.End()
 
-	products, err := h.productUsecase.ListProducts(reqCtx)
+	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(ctx.DefaultQuery("limit", "10"))
+
+	span.SetAttributes(
+		attribute.Int("pagination.page", page),
+		attribute.Int("pagination.limit", limit),
+	)
+
+	products, total, err := h.productUsecase.ListProducts(reqCtx, page, limit)
 	if err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -46,8 +54,14 @@ func (h *ProductHandler) ListProducts(ctx *gin.Context) {
 	}
 
 	span.SetAttributes(attribute.Int("products.count", len(products)))
+	span.SetAttributes(attribute.Int("products.total", total))
 	span.SetStatus(codes.Ok, "Products retrieved successfully")
-	helper.WriteAPIResponse(ctx, products, "Products retrieved successfully", http.StatusOK)
+	helper.WriteAPIResponse(ctx, map[string]interface{}{
+		"products": products,
+		"total":    total,
+		"page":     page,
+		"limit":    limit,
+	}, "Products retrieved successfully", http.StatusOK)
 }
 
 func (h *ProductHandler) GetProduct(ctx *gin.Context) {

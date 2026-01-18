@@ -17,7 +17,7 @@ import (
 type mockProductUsecase struct {
 	createProductFn  func(ctx context.Context, product *entity.Product) error
 	getProductByIDFn func(ctx context.Context, id uint) (*entity.Product, error)
-	listProductsFn   func(ctx context.Context) ([]entity.Product, error)
+	listProductsFn   func(ctx context.Context, page, perPage int) ([]entity.Product, int, error)
 	updateProductFn  func(ctx context.Context, id uint, product *entity.Product) error
 	restockProductFn func(ctx context.Context, id uint, quantity int) error
 	deleteProductFn  func(ctx context.Context, id uint) error
@@ -29,8 +29,8 @@ func (m *mockProductUsecase) CreateProduct(ctx context.Context, product *entity.
 func (m *mockProductUsecase) GetProductByID(ctx context.Context, id uint) (*entity.Product, error) {
 	return m.getProductByIDFn(ctx, id)
 }
-func (m *mockProductUsecase) ListProducts(ctx context.Context) ([]entity.Product, error) {
-	return m.listProductsFn(ctx)
+func (m *mockProductUsecase) ListProducts(ctx context.Context, page, perPage int) ([]entity.Product, int, error) {
+	return m.listProductsFn(ctx, page, perPage)
 }
 func (m *mockProductUsecase) UpdateProduct(ctx context.Context, id uint, product *entity.Product) error {
 	return m.updateProductFn(ctx, id, product)

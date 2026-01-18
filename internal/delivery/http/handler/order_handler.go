@@ -12,32 +12,62 @@ import (
 	validation "github.com/kareemhamed001/POS/internal/delivery/http/validation"
 	"github.com/kareemhamed001/POS/internal/entity"
 	"github.com/kareemhamed001/POS/internal/usecase"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type OrderHandler struct {
 	orderUsecase *usecase.OrderUsecase
 	validate     *validator.Validate
+	tracer       trace.Tracer
 }
 
 func NewOrderHandler(orderUsecase *usecase.OrderUsecase, validate *validator.Validate) *OrderHandler {
 	return &OrderHandler{
 		orderUsecase: orderUsecase,
 		validate:     validate,
+		tracer:       otel.Tracer("order-handler"),
 	}
 }
 
 func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
+	traceCtx, span := h.tracer.Start(ctx.Request.Context(), "OrderHandler.CreateOrder")
+	defer span.End()
+
+	// Parse and validate request
+	_, parseSpan := h.tracer.Start(traceCtx, "ParseRequest")
 	var req request.CreateOrderRequest
+
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		parseSpan.RecordError(err)
+		parseSpan.SetStatus(codes.Error, err.Error())
+		parseSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+
 		helper.WriteAPIResponse(ctx, nil, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	parseSpan.End()
 
+	// Validate request
+	_, validateSpan := h.tracer.Start(traceCtx, "ValidateRequest")
 	if err := h.validate.Struct(req); err != nil {
+		validateSpan.RecordError(err)
+		validateSpan.SetStatus(codes.Error, err.Error())
+		validateSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, validation.FormatValidationError(err), http.StatusBadRequest)
 		return
 	}
+	validateSpan.SetAttributes(attribute.Int("order.items.count", len(req.Items)))
+	validateSpan.End()
 
+	// Build order entity
+	_, buildSpan := h.tracer.Start(traceCtx, "BuildOrderEntity")
 	orderItems := make([]entity.OrderItem, len(req.Items))
 	for i, item := range req.Items {
 		orderItems[i] = entity.OrderItem{
@@ -56,12 +86,17 @@ func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
 		DiscountValue: req.DiscountValue,
 		Items:         orderItems,
 	}
+	buildSpan.End()
 
-	if err := h.orderUsecase.CreateOrder(ctx.Request.Context(), order); err != nil {
+	// Create order
+	if err := h.orderUsecase.CreateOrder(traceCtx, order); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	span.SetStatus(codes.Ok, "Order created successfully")
 	helper.WriteAPIResponse(ctx, gin.H{"order_id": order.ID}, "Order created successfully", http.StatusCreated)
 }
 

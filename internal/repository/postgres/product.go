@@ -34,7 +34,13 @@ func (r *ProductRepository) GetProductByID(ctx context.Context, id uint) (*entit
 	}
 	return &product, nil
 }
-
+func (r *ProductRepository) GetProductsByIDs(ctx context.Context, ids []uint) ([]entity.Product, error) {
+	products, err := gorm.G[entity.Product](r.db).Where("id IN ?", ids).Find(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return products, nil
+}
 func (r *ProductRepository) UpdateProduct(ctx context.Context, id uint, product *entity.Product) error {
 	rowsAffected, err := gorm.G[entity.Product](r.db).Where("id = ?", id).Updates(ctx, *product)
 	if err != nil {
@@ -46,12 +52,17 @@ func (r *ProductRepository) UpdateProduct(ctx context.Context, id uint, product 
 	return nil
 }
 
-func (r *ProductRepository) ListProducts(ctx context.Context) ([]entity.Product, error) {
-	products, err := gorm.G[entity.Product](r.db).Find(ctx)
+func (r *ProductRepository) ListProducts(ctx context.Context, page, perPage int) ([]entity.Product, int, error) {
+	products, err := gorm.G[entity.Product](r.db).Offset((page - 1) * perPage).Limit(perPage).Find(ctx)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
-	return products, nil
+
+	totalCount, err := gorm.G[entity.Product](r.db).Count(ctx, "*")
+	if err != nil {
+		return nil, 0, err
+	}
+	return products, int(totalCount), nil
 }
 
 func (r *ProductRepository) DeleteProduct(ctx context.Context, id uint) error {

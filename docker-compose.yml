@@ -20,6 +20,23 @@ services:
     networks:
       - pos_network
 
+  redis:
+    image: redis:7-alpine
+    container_name: pos_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pos_network
+
   app:
     build:
       context: .
@@ -41,11 +58,23 @@ services:
       MONGO_DB_URI:
       JWT_PRIVATE_KEY: test
 
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      REDIS_ENABLED: true
+
+      STORAGE_TYPE: local
+      STORAGE_LOCAL_PATH: uploads
+      STORAGE_LOCAL_URL: /uploads
+
     volumes:
       - .:/app
       - /app/tmp
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - pos_network
@@ -76,3 +105,4 @@ volumes:
   postgres_data:
   pgadmin_data:
   mongo_data:
+  redis_data:

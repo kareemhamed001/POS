@@ -16,6 +16,6 @@ type Product struct {
 	DiscountValue     float32      `json:"discount_value"`
 	DiscountStartDate *time.Time   `json:"discount_start_date"`
 	DiscountEndDate   *time.Time   `json:"discount_end_date"`
-	ImageUrl          string       `json:"image_url"`
+	ImageUrl          *string      `json:"image_url"`
 	Quantity          int          `json:"quantity"`
 }

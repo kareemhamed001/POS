@@ -19,21 +19,12 @@ func LoggerMiddleware(logger *logger.Logger) gin.HandlerFunc {
 		method := c.Request.Method
 		path := c.Request.URL.Path
 		logger.Info("HTTP Request",
-		zap.Int(
-			"status_code", statusCode
-		),
-		zap.Duration(
+			"status_code", statusCode,
 			"latency", latency,
-		),
-		zap.String(
 			"client_ip", clientIP,
-		),
-		zap.String(
 			"method", method,
-		),
-		zap.String(
 			"path", path,
-		),
-	)
-}
+		)
+	}
+
 }

@@ -29,3 +29,7 @@ main
 
 
 /uploads
+
+# files has .log extension
+*.log
+*.log.gz

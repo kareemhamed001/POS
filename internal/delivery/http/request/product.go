@@ -20,7 +20,7 @@ type CreateProductRequest struct {
 	DiscountValue     float32               `form:"discount_value" validate:"omitempty,gte=0"`
 	DiscountStartDate *string               `form:"discount_start_date" validate:"omitempty,datetime=2006-01-02 15:04:05"`
 	DiscountEndDate   *string               `form:"discount_end_date" validate:"omitempty,datetime=2006-01-02 15:04:05"`
-	Image             *multipart.FileHeader `form:"image" validate:"required"`
+	Image             *multipart.FileHeader `form:"image" validate:"omitempty" `
 	Quantity          int                   `form:"quantity" validate:"required,gte=0"`
 }
 
@@ -60,7 +60,7 @@ func ensureDiscountDatesValidity(startDate, endDate *time.Time) error {
 // uploadProductImage validates and uploads a product image file
 func uploadProductImage(ctx context.Context, fileHeader *multipart.FileHeader, fileStorage file.FileStorage) (string, error) {
 	if fileHeader == nil {
-		return "", errors.New("image file is required")
+		return "", nil
 	}
 
 	// Validate extension
@@ -101,10 +101,15 @@ func (r *CreateProductRequest) ToProduct(ctx context.Context, fileStorage file.F
 		return nil, err
 	}
 
-	// Handle image file upload (required, bound via struct)
+	// Handle image file upload (optional)
 	imageURL, err := uploadProductImage(ctx, r.Image, fileStorage)
 	if err != nil {
 		return nil, err
+	}
+
+	var imageUrlPtr *string
+	if imageURL != "" {
+		imageUrlPtr = &imageURL
 	}
 
 	return &entity.Product{
@@ -116,7 +121,7 @@ func (r *CreateProductRequest) ToProduct(ctx context.Context, fileStorage file.F
 		DiscountValue:     r.DiscountValue,
 		DiscountStartDate: discountStartDatePtr,
 		DiscountEndDate:   discountEndDatePtr,
-		ImageUrl:          imageURL,
+		ImageUrl:          imageUrlPtr,
 		Quantity:          r.Quantity,
 	}, nil
 }
@@ -166,7 +171,9 @@ func (r *UpdateProductRequest) ToProduct(existingProduct *entity.Product, ctx co
 		if err != nil {
 			return nil, err
 		}
-		updatedProduct.ImageUrl = imageURL
+		if imageURL != "" {
+			updatedProduct.ImageUrl = &imageURL
+		}
 	}
 	if r.Quantity != nil {
 		updatedProduct.Quantity = *r.Quantity

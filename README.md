@@ -6,6 +6,9 @@ A production-ready RESTful API for a Point of Sale system built with Go, featuri
 
 - **JWT Authentication**: Secure token-based authentication with registration and login endpoints
 - **Role-Based Authorization**: Admin and customer roles with role-specific middleware for protected endpoints
+- **Redis Caching**: High-performance caching layer for products, with cache-aside pattern and graceful degradation
+- **Session Management**: JWT token blacklist for secure logout functionality
+- **Rate Limiting**: IP-based rate limiting on authentication endpoints (10 req/min)
 - **User Management**: Create, read, update, and delete users with role-based access (customer/admin)
 - **Product Catalog**: Manage products with flexible pricing and discount strategies
 - **Order Processing**: Complete order lifecycle with item management and calculations
@@ -17,12 +20,14 @@ A production-ready RESTful API for a Point of Sale system built with Go, featuri
 - **Hot Reload**: Air integration for rapid development without rebuilding
 - **Comprehensive Testing**: Unit tests with SQLite in-memory database isolation
 - **Docker Ready**: Complete Docker and docker-compose setup for easy deployment
+- **Admin Seeding**: Automatic admin user creation on startup for quick setup
 
 ## 🛠️ Tech Stack
 
 - **Language**: Go 1.25.3
 - **Framework**: Gin Web Framework
 - **Database**: PostgreSQL (production) / SQLite (testing)
+- **Cache**: Redis 7
 - **ORM**: GORM with generics
 - **Authentication**: JWT (golang-jwt/jwt/v5)
 - **Password Hashing**: bcrypt
@@ -58,7 +63,27 @@ docker-compose up app -d --build
 
 The API will be available at `http://localhost:8081`
 
-3. **Stop the application**
+**Services Started:**
+
+- POS API: `http://localhost:8081`
+- PostgreSQL: `localhost:5432`
+- Redis: `localhost:6379`
+- PgAdmin: `http://localhost:5050`
+
+3. **Check service health**
+
+```bash
+# Check all containers
+docker-compose ps
+
+# View application logs
+docker logs -f pos_app
+
+# Check Redis connection
+docker exec -it pos_redis redis-cli PING
+```
+
+4. **Stop the application**
 
 ```bash
 docker-compose down
@@ -113,12 +138,14 @@ GET /health
 
 ### Authentication Endpoints
 
-**Note**: Authentication is required for all endpoints except `/health`, `/auth/register`, and `/auth/login`.
+**Note**: Authentication is required for all endpoints except `/health`, `/auth/register`, and `/auth/login`.  
+**Rate Limiting**: Login and register endpoints are limited to 10 requests per minute per IP address.
 
-| Method | Endpoint         | Description                 |
-| ------ | ---------------- | --------------------------- |
-| POST   | `/auth/register` | Register a new user account |
-| POST   | `/auth/login`    | Login and get JWT token     |
+| Method | Endpoint         | Description                 | Rate Limited |
+| ------ | ---------------- | --------------------------- | ------------ |
+| POST   | `/auth/register` | Register a new user account | ✅ 10/min    |
+| POST   | `/auth/login`    | Login and get JWT token     | ✅ 10/min    |
+| POST   | `/auth/logout`   | Logout and blacklist token  | ❌           |
 
 **Register Example:**
 
@@ -181,6 +208,26 @@ curl -X POST http://localhost:8081/api/auth/login \
   }
 }
 ```
+
+**Logout Example:**
+
+```bash
+# Logout and blacklist the current token
+curl -X POST http://localhost:8081/api/auth/logout \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "User logged out successfully",
+  "data": null
+}
+```
+
+**Note**: After logout, the token is blacklisted in Redis and cannot be used for subsequent requests.
 
 **Using the JWT Token:**
 
@@ -399,8 +446,21 @@ DB_USER=admin
 DB_PASSWORD=admin
 DB_NAME=pos_db
 
+# Redis Cache Configuration
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=
+REDIS_DB=0
+REDIS_ENABLED=true
+
 JWT_PRIVATE_KEY=your-super-secret-jwt-key-change-this-in-production
 JWT_TOKEN_DURATION=24
+
+# Default admin seeding (used on startup; ensure uniqueness)
+ADMIN_NAME=Admin
+ADMIN_EMAIL=admin@example.com
+ADMIN_PHONE=+201000000000
+ADMIN_PASSWORD=Admin123!
 ```
 
 **Environment Variables Explained:**
@@ -408,10 +468,46 @@ JWT_TOKEN_DURATION=24
 - `APP_ENV`: Environment (development/production)
 - `APP_PORT`: Server port
 - `DB_*`: Database connection settings
+- `REDIS_HOST`: Redis server hostname (use "redis" in Docker, "localhost" for local)
+- `REDIS_PORT`: Redis port (default: 6379)
+- `REDIS_PASSWORD`: Redis password (empty for no auth)
+- `REDIS_DB`: Redis database number (0-15)
+- `REDIS_ENABLED`: Enable/disable Redis caching (true/false)
 - `JWT_PRIVATE_KEY`: Secret key for signing JWT tokens (change in production!)
 - `JWT_TOKEN_DURATION`: Token expiration time in hours (default: 24)
+- `ADMIN_*`: Default admin user seeded at startup; set secure values and unique phone/email
 
 ## 🔧 Configuration
+
+### Redis Caching
+
+This application uses Redis for:
+
+- **Product Caching**: Individual products (30min TTL) and product lists (1hr TTL)
+- **Session Management**: JWT token blacklist for secure logout
+- **Rate Limiting**: IP-based rate limiting on authentication endpoints
+
+**Cache Features:**
+
+- Cache-aside pattern (lazy loading)
+- Graceful degradation (works without Redis)
+- Automatic cache invalidation on product updates
+- Connection pooling with health checks
+
+For detailed Redis configuration and usage, see [REDIS.md](REDIS.md).
+
+**Quick Redis Commands:**
+
+```bash
+# Monitor cache in real-time
+docker exec -it pos_redis redis-cli MONITOR
+
+# Check all cached keys
+docker exec -it pos_redis redis-cli KEYS "*"
+
+# Get product from cache
+docker exec -it pos_redis redis-cli GET "product:1"
+```
 
 ### Database Configuration
 
@@ -427,6 +523,11 @@ type Config struct {
     DBUser       string
     DBPassword   string
     DBName       string
+    RedisHost    string
+    RedisPort    int
+    RedisPassword string
+    RedisDB      int
+    RedisEnabled bool
     JWTPrivateKey string
 }
 ```

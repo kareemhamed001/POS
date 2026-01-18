@@ -13,6 +13,7 @@ type mockProductRepository struct {
 	getProductByIDFn func(ctx context.Context, id uint) (*entity.Product, error)
 	listProductsFn   func(ctx context.Context) ([]entity.Product, error)
 	updateProductFn  func(ctx context.Context, id uint, product *entity.Product) error
+	deleteProductFn  func(ctx context.Context, id uint) error
 }
 
 func (m *mockProductRepository) CreateProduct(ctx context.Context, product *entity.Product) error {
@@ -31,9 +32,13 @@ func (m *mockProductRepository) UpdateProduct(ctx context.Context, id uint, prod
 	return m.updateProductFn(ctx, id, product)
 }
 
+func (m *mockProductRepository) DeleteProduct(ctx context.Context, id uint) error {
+	return m.deleteProductFn(ctx, id)
+}
+
 func TestProductUsecase_CreateProduct(t *testing.T) {
 	mockRepo := &mockProductRepository{}
-	usecase := NewProductUsecase(mockRepo)
+	usecase := NewProductUsecase(mockRepo, nil) // nil cache for tests
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -68,7 +73,7 @@ func TestProductUsecase_CreateProduct(t *testing.T) {
 
 func TestProductUsecase_GetProductByID(t *testing.T) {
 	mockRepo := &mockProductRepository{}
-	usecase := NewProductUsecase(mockRepo)
+	usecase := NewProductUsecase(mockRepo, nil) // nil cache for tests
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -103,7 +108,7 @@ func TestProductUsecase_GetProductByID(t *testing.T) {
 
 func TestProductUsecase_ListProducts(t *testing.T) {
 	mockRepo := &mockProductRepository{}
-	usecase := NewProductUsecase(mockRepo)
+	usecase := NewProductUsecase(mockRepo, nil) // nil cache for tests
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -124,7 +129,7 @@ func TestProductUsecase_ListProducts(t *testing.T) {
 
 func TestProductUsecase_UpdateProduct(t *testing.T) {
 	mockRepo := &mockProductRepository{}
-	usecase := NewProductUsecase(mockRepo)
+	usecase := NewProductUsecase(mockRepo, nil) // nil cache for tests
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {
@@ -142,7 +147,7 @@ func TestProductUsecase_UpdateProduct(t *testing.T) {
 
 func TestProductUsecase_RestockProduct(t *testing.T) {
 	mockRepo := &mockProductRepository{}
-	usecase := NewProductUsecase(mockRepo)
+	usecase := NewProductUsecase(mockRepo, nil) // nil cache for tests
 	ctx := context.Background()
 
 	t.Run("success", func(t *testing.T) {

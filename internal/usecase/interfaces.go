@@ -41,6 +41,7 @@ type ProductRepository interface {
 	GetProductByID(ctx context.Context, id uint) (*entity.Product, error)
 	UpdateProduct(ctx context.Context, id uint, product *entity.Product) error
 	ListProducts(ctx context.Context) ([]entity.Product, error)
+	DeleteProduct(ctx context.Context, id uint) error
 }
 
 type ProductUsecaseInterface interface {
@@ -48,6 +49,7 @@ type ProductUsecaseInterface interface {
 	GetProductByID(ctx context.Context, id uint) (*entity.Product, error)
 	ListProducts(ctx context.Context) ([]entity.Product, error)
 	UpdateProduct(ctx context.Context, id uint, product *entity.Product) error
+	DeleteProduct(ctx context.Context, id uint) error
 	RestockProduct(ctx context.Context, id uint, quantity int) error
 }
 

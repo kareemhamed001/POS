@@ -16,6 +16,8 @@ func MetricsMiddleware(metricsCollector *tracer.GenericMetricsCollector) gin.Han
 		// Continue request
 		ctx.Next()
 
+		err := ctx.Errors.Last()
+
 		// Extract handler name from route
 		handlerName := extractHandlerName(ctx.Request.URL.Path)
 		operation := extractOperationName(ctx.Request.Method, ctx.Request.URL.Path)
@@ -26,7 +28,7 @@ func MetricsMiddleware(metricsCollector *tracer.GenericMetricsCollector) gin.Han
 			handlerName,
 			operation,
 			ctx.Writer.Status(),
-			nil,
+			err,
 			time.Since(start),
 		)
 	}
@@ -34,11 +36,11 @@ func MetricsMiddleware(metricsCollector *tracer.GenericMetricsCollector) gin.Han
 
 func extractHandlerName(path string) string {
 	// Extract handler name from API path
-	// e.g., "/api/v1/users" -> "user"
-	// e.g., "/api/v1/products" -> "product"
+	// e.g., "/api/users" -> "user"
+	// e.g., "/api/products" -> "product"
 	parts := strings.Split(path, "/")
-	if len(parts) >= 4 {
-		resource := parts[3]
+	if len(parts) >= 3 {
+		resource := parts[2]
 		if resource != "" {
 			// Remove trailing 's' for singular form
 			if strings.HasSuffix(resource, "s") {
@@ -52,11 +54,11 @@ func extractHandlerName(path string) string {
 
 func extractOperationName(method, path string) string {
 	// Extract operation name from method and path
-	// e.g., "GET /api/v1/users" -> "list_users"
-	// e.g., "POST /api/v1/users" -> "create_user"
+	// e.g., "GET /api/users" -> "list_users"
+	// e.g., "POST /api/users" -> "create_user"
 	parts := strings.Split(path, "/")
-	if len(parts) >= 4 {
-		resource := parts[3]
+	if len(parts) >= 3 {
+		resource := parts[2]
 
 		switch method {
 		case "GET":

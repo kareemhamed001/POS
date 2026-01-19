@@ -47,6 +47,22 @@ func main() {
 		logger.Info("OpenTelemetry tracer initialized successfully")
 	}
 
+	// Initialize Prometheus metrics exporter
+	mp, metricsHandler, err := tracer.InitPrometheusMeterProvider("pos")
+	if err != nil {
+		logger.Warnf("Failed to initialize prometheus metrics: %v. Continuing without metrics.", err)
+	} else {
+		defer func() {
+			if err := mp.Shutdown(context.Background()); err != nil {
+				logger.Errorf("Failed to shutdown meter provider: %v", err)
+			}
+		}()
+		logger.Info("Prometheus metrics exporter initialized successfully")
+	}
+
+	// Initialize generic metrics collector
+	metricsCollector := tracer.NewGenericMetricsCollector("http-handler")
+
 	db, err := db.InitializeDB(config.DBDriver, config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName)
 	if err != nil {
 		panic(err)
@@ -82,13 +98,18 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	// Add tracing middleware (should be early in the chain)
+	// Add middleware (early in the chain)
+	router.Use(middleware.MetricsMiddleware(metricsCollector))
 	router.Use(middleware.TracingMiddleware("pos-api"))
 	router.Use(middleware.LoggerMiddleware(logger.Get()))
 
 	// Serve uploaded files for local storage
 	if config.StorageType == "local" {
 		router.Static(config.StorageLocalURL, config.StorageLocalPath)
+	}
+
+	if metricsHandler != nil {
+		router.GET("/metrics", gin.WrapH(metricsHandler))
 	}
 
 	router.GET("/health", func(ctx *gin.Context) {

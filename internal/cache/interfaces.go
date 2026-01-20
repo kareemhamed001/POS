@@ -12,9 +12,6 @@ type ProductCache interface {
 	GetProduct(ctx context.Context, id uint) (*entity.Product, error)
 	SetProduct(ctx context.Context, product *entity.Product, ttl time.Duration) error
 	DeleteProduct(ctx context.Context, id uint) error
-	GetProductList(ctx context.Context, key string) ([]entity.Product, error)
-	SetProductList(ctx context.Context, key string, products []entity.Product, ttl time.Duration) error
-	InvalidateProductList(ctx context.Context) error
 }
 
 // TokenCache defines caching operations for JWT tokens (blacklist)

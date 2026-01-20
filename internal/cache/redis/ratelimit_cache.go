@@ -28,6 +28,7 @@ func (c *RateLimitCache) IncrementCounter(ctx context.Context, key string, windo
 
 	fullKey := fmt.Sprintf("%s%s", rateLimitPrefix, key)
 
+	//pipeline ensures atomicity , increment and set expiration at the same time
 	pipe := c.client.Pipeline()
 	incr := pipe.Incr(ctx, fullKey)
 	pipe.Expire(ctx, fullKey, window)

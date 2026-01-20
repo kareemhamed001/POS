@@ -33,3 +33,4 @@ main
 # files has .log extension
 *.log
 *.log.gz
+/logs

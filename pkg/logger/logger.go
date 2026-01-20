@@ -19,7 +19,7 @@ var (
 	once         sync.Once
 )
 
-func New(env string) *Logger {
+func new(env string) *Logger {
 	var (
 		base *zap.Logger
 	)
@@ -29,16 +29,23 @@ func New(env string) *Logger {
 	encoderConfig.ConsoleSeparator = " | "
 
 	lumberjackLogger := &lumberjack.Logger{
-		Filename:   "system.log",
+		Filename:   "logs/system.log",
 		MaxSize:    2,    // Megabytes
 		MaxBackups: 10,   // Keep 10 old files
 		MaxAge:     28,   // Days
 		Compress:   true, // Gzip old logs
 	}
 
+	var logLevel zapcore.Level
+	if env == "development" {
+		logLevel = zap.DebugLevel
+	} else {
+		logLevel = zap.InfoLevel
+	}
+
 	core := zapcore.NewTee(
-		zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig), zapcore.AddSync(lumberjackLogger), zap.InfoLevel),
-		zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), zapcore.AddSync(os.Stdout), zap.DebugLevel),
+		zapcore.NewCore(zapcore.NewJSONEncoder(encoderConfig), zapcore.AddSync(lumberjackLogger), logLevel),
+		zapcore.NewCore(zapcore.NewConsoleEncoder(encoderConfig), zapcore.AddSync(os.Stdout), logLevel),
 	)
 
 	base = zap.New(core)
@@ -49,7 +56,7 @@ func New(env string) *Logger {
 // InitGlobal initializes the global logger instance (call this once in main)
 func InitGlobal(env string) {
 	once.Do(func() {
-		globalLogger = New(env)
+		globalLogger = new(env)
 	})
 }
 
@@ -57,7 +64,7 @@ func InitGlobal(env string) {
 func Get() *Logger {
 	if globalLogger == nil {
 		log.Println("Warning: global logger not initialized, creating default logger")
-		globalLogger = New("development")
+		globalLogger = new("development")
 	}
 	return globalLogger
 }

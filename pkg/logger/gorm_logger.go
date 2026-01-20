@@ -61,6 +61,7 @@ func (l *GormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 	sql, rows := fc()
 
 	switch {
+	//if error occurred and log level is Error and it's not record not found error or we are not ignoring record not found errors
 	case err != nil && l.LogLevel >= gormlogger.Error && (!errors.Is(err, gorm.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
 		l.ZapLogger.Error("database error",
 			zap.Error(err),

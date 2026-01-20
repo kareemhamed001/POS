@@ -24,10 +24,10 @@ func SetupUserRoutes(router *gin.Engine, userHandler *handler.UserHandler, jwtMa
 	userRoutes := router.Group("/api/users")
 	userRoutes.Use(middleware.Auth(jwtManager, tokenCache))
 	{
-		userRoutes.GET("", userHandler.ListUsers)
+		userRoutes.GET("", middleware.HasRole("admin"), userHandler.ListUsers)
 		userRoutes.POST("", middleware.HasRole("admin"), userHandler.CreateUser)
-		userRoutes.GET("/:id", userHandler.GetUserByID)
-		userRoutes.PUT("/:id", userHandler.UpdateUser)
+		userRoutes.GET("/:id", middleware.HasRole("admin"), userHandler.GetUserByID)
+		userRoutes.PUT("/:id", middleware.HasRole("admin"), userHandler.UpdateUser)
 		userRoutes.DELETE("/:id", middleware.HasRole("admin"), userHandler.DeleteUser)
 	}
 }
@@ -36,8 +36,8 @@ func SetupOrderRoutes(router *gin.Engine, orderHandler *handler.OrderHandler, jw
 	orderRoutes := router.Group("/api/orders")
 	orderRoutes.Use(middleware.Auth(jwtManager, tokenCache))
 	{
-		orderRoutes.POST("", orderHandler.CreateOrder)
-		orderRoutes.GET("/:id", orderHandler.GetOrderByID)
+		orderRoutes.POST("", middleware.HasRole("admin"), orderHandler.CreateOrder)
+		orderRoutes.GET("/:id", middleware.HasRole("admin"), orderHandler.GetOrderByID)
 		orderRoutes.PATCH("/:id/status", middleware.HasRole("admin"), orderHandler.UpdateStatus)
 	}
 }

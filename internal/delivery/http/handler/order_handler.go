@@ -36,7 +36,6 @@ func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
 	traceCtx, span := h.tracer.Start(ctx.Request.Context(), "OrderHandler.CreateOrder")
 	defer span.End()
 
-	// Parse and validate request
 	_, parseSpan := h.tracer.Start(traceCtx, "ParseRequest")
 	var req request.CreateOrderRequest
 
@@ -52,7 +51,6 @@ func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
 	}
 	parseSpan.End()
 
-	// Validate request
 	_, validateSpan := h.tracer.Start(traceCtx, "ValidateRequest")
 	if err := h.validate.Struct(req); err != nil {
 		validateSpan.RecordError(err)
@@ -66,7 +64,6 @@ func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
 	validateSpan.SetAttributes(attribute.Int("order.items.count", len(req.Items)))
 	validateSpan.End()
 
-	// Build order entity
 	_, buildSpan := h.tracer.Start(traceCtx, "BuildOrderEntity")
 	orderItems := make([]entity.OrderItem, len(req.Items))
 	for i, item := range req.Items {
@@ -88,7 +85,6 @@ func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
 	}
 	buildSpan.End()
 
-	// Create order
 	if err := h.orderUsecase.CreateOrder(traceCtx, order); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
@@ -101,19 +97,37 @@ func (h *OrderHandler) CreateOrder(ctx *gin.Context) {
 }
 
 func (h *OrderHandler) GetOrderByID(ctx *gin.Context) {
+	traceCtx, span := h.tracer.Start(ctx.Request.Context(), "OrderHandler.GetOrderByID")
+	defer span.End()
+
+	_, parseSpan := h.tracer.Start(traceCtx, "ParseOrderID")
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
+		parseSpan.RecordError(err)
+		parseSpan.SetStatus(codes.Error, err.Error())
+		parseSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, "invalid order id", http.StatusBadRequest)
 		return
 	}
+	parseSpan.SetAttributes(attribute.Int("order.id", id))
+	parseSpan.End()
 
-	order, err := h.orderUsecase.GetOrder(ctx.Request.Context(), uint(id))
+	usecaseCtx, usecaseSpan := h.tracer.Start(traceCtx, "GetOrderUsecase")
+	order, err := h.orderUsecase.GetOrder(usecaseCtx, uint(id))
 	if err != nil {
+		usecaseSpan.RecordError(err)
+		usecaseSpan.SetStatus(codes.Error, err.Error())
+		usecaseSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, err.Error(), http.StatusNotFound)
 		return
 	}
+	usecaseSpan.End()
 
-	// Manual conversion to response since we haven't added ToOrderResponse yet
+	_, mapSpan := h.tracer.Start(traceCtx, "MapOrderResponse")
 	itemsResponse := make([]response.OrderItemResponse, len(order.Items))
 	for i, item := range order.Items {
 		itemsResponse[i] = response.OrderItemResponse{
@@ -140,32 +154,67 @@ func (h *OrderHandler) GetOrderByID(ctx *gin.Context) {
 		Total:         order.Total,
 		Items:         itemsResponse,
 	}
+	mapSpan.End()
 
+	span.SetStatus(codes.Ok, "Order retrieved successfully")
 	helper.WriteAPIResponse(ctx, gin.H{"order": orderResponse}, "Order retrieved successfully", http.StatusOK)
 }
 
 func (h *OrderHandler) UpdateStatus(ctx *gin.Context) {
+	traceCtx, span := h.tracer.Start(ctx.Request.Context(), "OrderHandler.UpdateStatus")
+	defer span.End()
+
+	_, parseSpan := h.tracer.Start(traceCtx, "ParseOrderID")
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
+		parseSpan.RecordError(err)
+		parseSpan.SetStatus(codes.Error, err.Error())
+		parseSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, "invalid order id", http.StatusBadRequest)
 		return
 	}
+	parseSpan.SetAttributes(attribute.Int("order.id", id))
+	parseSpan.End()
 
+	_, bindSpan := h.tracer.Start(traceCtx, "BindUpdateOrderStatusRequest")
 	var req request.UpdateOrderStatusRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
+		bindSpan.RecordError(err)
+		bindSpan.SetStatus(codes.Error, err.Error())
+		bindSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, "invalid request body", http.StatusBadRequest)
 		return
 	}
+	bindSpan.End()
 
+	_, validateSpan := h.tracer.Start(traceCtx, "ValidateUpdateOrderStatusRequest")
 	if err := h.validate.Struct(req); err != nil {
+		validateSpan.RecordError(err)
+		validateSpan.SetStatus(codes.Error, err.Error())
+		validateSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, validation.FormatValidationError(err), http.StatusBadRequest)
 		return
 	}
+	validateSpan.End()
 
-	if err := h.orderUsecase.UpdateStatus(ctx.Request.Context(), uint(id), req.Status); err != nil {
+	usecaseCtx, usecaseSpan := h.tracer.Start(traceCtx, "UpdateOrderStatusUsecase")
+	if err := h.orderUsecase.UpdateStatus(usecaseCtx, uint(id), req.Status); err != nil {
+		usecaseSpan.RecordError(err)
+		usecaseSpan.SetStatus(codes.Error, err.Error())
+		usecaseSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		helper.WriteAPIResponse(ctx, nil, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	usecaseSpan.End()
 
+	span.SetStatus(codes.Ok, "Order status updated successfully")
 	helper.WriteAPIResponse(ctx, nil, "Order status updated successfully", http.StatusOK)
 }

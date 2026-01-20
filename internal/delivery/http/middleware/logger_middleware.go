@@ -18,13 +18,17 @@ func LoggerMiddleware(logger *logger.Logger) gin.HandlerFunc {
 		clientIP := c.ClientIP()
 		method := c.Request.Method
 		path := c.Request.URL.Path
-		logger.Info("HTTP Request",
-			"status_code", statusCode,
-			"latency", latency,
-			"client_ip", clientIP,
-			"method", method,
-			"path", path,
-		)
+
+		defer func() {
+			logger.Info("HTTP Request",
+				"status_code", statusCode,
+				"latency", latency,
+				"client_ip", clientIP,
+				"method", method,
+				"path", path,
+			)
+		}()
+
 	}
 
 }

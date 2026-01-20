@@ -13,24 +13,26 @@ func MetricsMiddleware(metricsCollector *tracer.GenericMetricsCollector) gin.Han
 	return func(ctx *gin.Context) {
 		start := time.Now()
 
+		defer func() {
+			err := ctx.Errors.Last()
+
+			// Extract handler name from route
+			handlerName := extractHandlerName(ctx.Request.URL.Path)
+			operation := extractOperationName(ctx.Request.Method, ctx.Request.URL.Path)
+
+			// Record metrics after the response is written
+			metricsCollector.Record(
+				ctx.Request.Context(),
+				handlerName,
+				operation,
+				ctx.Writer.Status(),
+				err,
+				time.Since(start),
+			)
+		}()
+
 		// Continue request
 		ctx.Next()
-
-		err := ctx.Errors.Last()
-
-		// Extract handler name from route
-		handlerName := extractHandlerName(ctx.Request.URL.Path)
-		operation := extractOperationName(ctx.Request.Method, ctx.Request.URL.Path)
-
-		// Record metrics
-		metricsCollector.Record(
-			ctx.Request.Context(),
-			handlerName,
-			operation,
-			ctx.Writer.Status(),
-			err,
-			time.Since(start),
-		)
 	}
 }
 

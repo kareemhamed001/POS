@@ -14,7 +14,6 @@ import (
 
 const tracerName = "github.com/kareemhamed001/POS/http"
 
-// TracingMiddleware creates OpenTelemetry tracing middleware for Gin
 func TracingMiddleware(serviceName string) gin.HandlerFunc {
 	tracer := otel.Tracer(tracerName)
 
@@ -31,7 +30,6 @@ func TracingMiddleware(serviceName string) gin.HandlerFunc {
 			spanName = fmt.Sprintf("%s %s", c.Request.Method, c.Request.URL.Path)
 		}
 
-		// Start span
 		ctx, span := tracer.Start(ctx, spanName,
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(
@@ -46,30 +44,24 @@ func TracingMiddleware(serviceName string) gin.HandlerFunc {
 			),
 		)
 		defer span.End()
+		defer func() {
+			statusCode := c.Writer.Status()
+			span.SetAttributes(semconv.HTTPStatusCodeKey.Int(statusCode))
 
-		// Store span in gin context for potential use in handlers
-		c.Set("otel-span", span)
+			if statusCode >= 400 {
+				span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", statusCode))
+			} else {
+				span.SetStatus(codes.Ok, "")
+			}
 
-		// Replace request context with traced context
+			if len(c.Errors) > 0 {
+				span.RecordError(c.Errors.Last())
+				span.SetAttributes(attribute.String("error.message", c.Errors.String()))
+			}
+		}()
+
 		c.Request = c.Request.WithContext(ctx)
 
-		// Process request
 		c.Next()
-
-		// Set span status based on HTTP status code
-		statusCode := c.Writer.Status()
-		span.SetAttributes(semconv.HTTPStatusCodeKey.Int(statusCode))
-
-		if statusCode >= 400 {
-			span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", statusCode))
-		} else {
-			span.SetStatus(codes.Ok, "")
-		}
-
-		// Add error information if present
-		if len(c.Errors) > 0 {
-			span.RecordError(c.Errors.Last())
-			span.SetAttributes(attribute.String("error.message", c.Errors.String()))
-		}
 	}
 }

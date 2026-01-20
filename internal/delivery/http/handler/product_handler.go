@@ -92,7 +92,6 @@ func (h *ProductHandler) CreateProduct(ctx *gin.Context) {
 	defer span.End()
 
 	var productRequest request.CreateProductRequest
-	// Support multipart/form-data for file upload and regular form fields
 	if err := ctx.ShouldBind(&productRequest); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "binding failed")
@@ -100,7 +99,6 @@ func (h *ProductHandler) CreateProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Validation span
 	_, validationSpan := h.tracer.Start(reqCtx, "ProductHandler.ValidateProduct")
 	if err := h.validate.Struct(&productRequest); err != nil {
 		validationSpan.RecordError(err)
@@ -114,7 +112,6 @@ func (h *ProductHandler) CreateProduct(ctx *gin.Context) {
 	}
 	validationSpan.End()
 
-	// File processing span
 	_, fileSpan := h.tracer.Start(reqCtx, "ProductHandler.ProcessProductData")
 	product, err := productRequest.ToProduct(reqCtx, h.fileStorage)
 	if err != nil {
@@ -154,7 +151,6 @@ func (h *ProductHandler) UpdateProduct(ctx *gin.Context) {
 	span.SetAttributes(attribute.Int("product.id", id))
 
 	var productRequest request.UpdateProductRequest
-	// Support multipart/form-data for file upload and regular form fields
 	if err := ctx.ShouldBind(&productRequest); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "binding failed")
@@ -162,7 +158,6 @@ func (h *ProductHandler) UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	// Validation span
 	_, validationSpan := h.tracer.Start(reqCtx, "ProductHandler.ValidateUpdateProduct")
 	if err := h.validate.Struct(&productRequest); err != nil {
 		validationSpan.RecordError(err)
@@ -176,7 +171,6 @@ func (h *ProductHandler) UpdateProduct(ctx *gin.Context) {
 	}
 	validationSpan.End()
 
-	// Get existing product
 	existingProduct, err := h.productUsecase.GetProductByID(reqCtx, uint(id))
 	if err != nil {
 		span.RecordError(err)
@@ -185,7 +179,6 @@ func (h *ProductHandler) UpdateProduct(ctx *gin.Context) {
 		return
 	}
 
-	// File processing span (if image is being updated)
 	_, fileSpan := h.tracer.Start(reqCtx, "ProductHandler.ProcessUpdateProductData")
 	product, err := productRequest.ToProduct(existingProduct, reqCtx, h.fileStorage)
 	if err != nil {

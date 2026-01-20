@@ -57,10 +57,10 @@ func (u *ProductUsecase) CreateProduct(ctx context.Context, product *entity.Prod
 	dbSpan.End()
 
 	// Cache invalidation span
-	_, cacheSpan := u.tracer.Start(ctx, "Cache.InvalidateProductList")
-	if err := u.productCache.InvalidateProductList(ctx); err != nil {
+	_, cacheSpan := u.tracer.Start(ctx, "Cache.SetProduct")
+	if err := u.productCache.SetProduct(ctx, product, productCacheTTL); err != nil {
 		cacheSpan.RecordError(err)
-		logger.Warnf("Failed to invalidate product list cache: %v", err)
+		logger.Warnf("Failed to cache product: %v", err)
 	}
 	cacheSpan.End()
 
@@ -175,10 +175,10 @@ func (u *ProductUsecase) UpdateProduct(ctx context.Context, id uint, product *en
 	}
 	deleteSpan.End()
 
-	_, invalidateSpan := u.tracer.Start(ctx, "Cache.InvalidateProductList")
-	if err := u.productCache.InvalidateProductList(ctx); err != nil {
+	_, invalidateSpan := u.tracer.Start(ctx, "Cache.DeleteProduct")
+	if err := u.productCache.DeleteProduct(ctx, id); err != nil {
 		invalidateSpan.RecordError(err)
-		logger.Warnf("Failed to invalidate product list cache: %v", err)
+		logger.Warnf("Failed to delete product from cache: %v", err)
 	}
 	invalidateSpan.End()
 
@@ -187,17 +187,37 @@ func (u *ProductUsecase) UpdateProduct(ctx context.Context, id uint, product *en
 }
 
 func (u *ProductUsecase) RestockProduct(ctx context.Context, id uint, quantity int) error {
+	ctx, span := u.tracer.Start(ctx, "ProductUsecase.RestockProduct")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.Int("product.id", int(id)),
+		attribute.Int("product.restock_quantity", quantity),
+	)
+
 	if quantity <= 0 {
-		return errors.New("quantity must be greater than zero")
+		err := errors.New("quantity must be greater than zero")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
 	}
 
 	product, err := u.productRepo.GetProductByID(ctx, id)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
 	product.Quantity += quantity
-	return u.productRepo.UpdateProduct(ctx, id, product)
+	if err := u.productRepo.UpdateProduct(ctx, id, product); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "product restocked")
+	return nil
 }
 
 func (u *ProductUsecase) DeleteProduct(ctx context.Context, id uint) error {
@@ -226,10 +246,10 @@ func (u *ProductUsecase) DeleteProduct(ctx context.Context, id uint) error {
 	}
 	deleteSpan.End()
 
-	_, invalidateSpan := u.tracer.Start(ctx, "Cache.InvalidateProductList")
-	if err := u.productCache.InvalidateProductList(ctx); err != nil {
+	_, invalidateSpan := u.tracer.Start(ctx, "Cache.DeleteProduct")
+	if err := u.productCache.DeleteProduct(ctx, id); err != nil {
 		invalidateSpan.RecordError(err)
-		logger.Warnf("Failed to invalidate product list cache: %v", err)
+		logger.Warnf("Failed to delete product from cache: %v", err)
 	}
 	invalidateSpan.End()
 

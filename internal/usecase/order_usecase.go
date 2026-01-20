@@ -58,7 +58,7 @@ func (u *OrderUsecase) CreateOrder(ctx context.Context, order *entity.Order) err
 
 	// Track quantity deductions per product
 	quantityDeductions := make(map[uint]int)
-	
+
 	// Process items in parallel for calculations
 	itemCalcCtx, itemCalcSpan := u.tracer.Start(ctx, "ProcessOrderItemsParallel")
 	processErr := u.processOrderItemsParallel(itemCalcCtx, order, productMap, quantityDeductions)
@@ -157,7 +157,7 @@ func (u *OrderUsecase) processOrderItemsParallel(ctx context.Context, order *ent
 			)
 
 			item := &order.Items[index]
-			
+
 			mu.Lock()
 			product, exists := productMap[item.ProductID]
 			// Calculate total deductions for this product so far
@@ -239,17 +239,41 @@ func (u *OrderUsecase) processOrderItemsParallel(ctx context.Context, order *ent
 }
 
 func (u *OrderUsecase) GetOrder(ctx context.Context, id uint) (*entity.Order, error) {
-	return u.orderRepo.GetOrderByID(ctx, id)
+	ctx, span := u.tracer.Start(ctx, "OrderUsecase.GetOrder")
+	defer span.End()
+
+	span.SetAttributes(attribute.Int("order.id", int(id)))
+
+	order, err := u.orderRepo.GetOrderByID(ctx, id)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return nil, err
+	}
+
+	span.SetStatus(codes.Ok, "order retrieved")
+	return order, nil
 }
 
 func (u *OrderUsecase) UpdateStatus(ctx context.Context, id uint, status entity.OrderStatus) error {
+	ctx, span := u.tracer.Start(ctx, "OrderUsecase.UpdateStatus")
+	defer span.End()
+
+	span.SetAttributes(
+		attribute.Int("order.id", int(id)),
+		attribute.String("order.status", string(status)),
+	)
+
 	order, err := u.orderRepo.GetOrderByID(ctx, id)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return err
 	}
 
 	// Logic to return stock if order is cancelled
 	if status == entity.StatusCancelled && order.Status != entity.StatusCancelled {
+		_, revertSpan := u.tracer.Start(ctx, "OrderUsecase.RevertStock")
 		for _, item := range order.Items {
 			product, err := u.productRepo.GetProductByID(ctx, item.ProductID)
 			if err != nil {
@@ -260,11 +284,31 @@ func (u *OrderUsecase) UpdateStatus(ctx context.Context, id uint, status entity.
 			if err := u.productRepo.UpdateProduct(ctx, product.ID, product); err != nil {
 			}
 		}
+		revertSpan.End()
 	}
 
-	return u.orderRepo.UpdateOrderStatus(ctx, id, status)
+	if err := u.orderRepo.UpdateOrderStatus(ctx, id, status); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "order status updated")
+	return nil
 }
 
 func (u *OrderUsecase) DeleteOrder(ctx context.Context, id uint) error {
-	return u.orderRepo.DeleteOrder(ctx, id)
+	ctx, span := u.tracer.Start(ctx, "OrderUsecase.DeleteOrder")
+	defer span.End()
+
+	span.SetAttributes(attribute.Int("order.id", int(id)))
+
+	if err := u.orderRepo.DeleteOrder(ctx, id); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
+		return err
+	}
+
+	span.SetStatus(codes.Ok, "order deleted")
+	return nil
 }

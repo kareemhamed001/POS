@@ -2,9 +2,12 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/kareemhamed001/POS/internal/cache"
@@ -24,88 +27,57 @@ import (
 	"github.com/kareemhamed001/POS/pkg/logger"
 	redisClient "github.com/kareemhamed001/POS/pkg/redis"
 	"github.com/kareemhamed001/POS/pkg/tracer"
+	"gorm.io/gorm"
 )
 
 func main() {
-	config := config.NewConfig()
+	cfg := config.NewConfig()
 
-	// Initialize global logger
-	logger.InitGlobal(config.AppEnv)
+	logger.InitGlobal(cfg.AppEnv)
 	defer logger.Sync()
 
-	// Initialize OpenTelemetry tracer
-	jaegerEndpoint := getEnv("JAEGER_ENDPOINT", "http://jaeger:14268/api/traces")
-	tp, err := tracer.InitTracer("pos-api", jaegerEndpoint)
-	if err != nil {
-		logger.Warnf("Failed to initialize tracer: %v. Continuing without tracing.", err)
-	} else {
-		defer func() {
-			if err := tracer.Shutdown(context.Background(), tp); err != nil {
-				logger.Errorf("Failed to shutdown tracer: %v", err)
-			}
-		}()
-		logger.Info("OpenTelemetry tracer initialized successfully")
-	}
+	setGinMode(cfg.AppEnv)
 
-	// Initialize Prometheus metrics exporter
-	mp, metricsHandler, err := tracer.InitPrometheusMeterProvider("pos")
-	if err != nil {
-		logger.Warnf("Failed to initialize prometheus metrics: %v. Continuing without metrics.", err)
-	} else {
-		defer func() {
-			if err := mp.Shutdown(context.Background()); err != nil {
-				logger.Errorf("Failed to shutdown meter provider: %v", err)
-			}
-		}()
-		logger.Info("Prometheus metrics exporter initialized successfully")
-	}
+	shutdownTracing := initTracing(cfg)
+	defer shutdownTracing()
 
-	// Initialize generic metrics collector
+	metricsHandler, shutdownMetrics := initMetrics()
+	defer shutdownMetrics()
+
 	metricsCollector := tracer.NewGenericMetricsCollector("http-handler")
 
-	db, err := db.InitializeDB(config.DBDriver, config.DBHost, config.DBPort, config.DBUser, config.DBPassword, config.DBName)
+	dbConn, closeDB, err := initDatabase(cfg)
 	if err != nil {
-		panic(err)
+		logger.Errorf("Failed to initialize DB: %v", err)
+		return
 	}
-	logger.Info("DB started successfully")
+	defer closeDB()
 
-	//migrate
-	db.AutoMigrate(&entity.User{}, &entity.Address{}, &entity.Order{}, &entity.Product{}, &entity.OrderItem{})
-	defer func() {
-		sqlDB, err := db.DB()
-		if err != nil {
-			panic(err)
-		}
-		sqlDB.Close()
-	}()
-
-	// Initialize Redis
-	rdb, err := redisClient.NewClient(config)
-	if err != nil {
-		logger.Warnf("Redis initialization failed: %v. Continuing without cache.", err)
-		rdb = &redisClient.Client{} // Empty client for graceful degradation
+	if err := dbConn.AutoMigrate(&entity.User{}, &entity.Address{}, &entity.Order{}, &entity.Product{}, &entity.OrderItem{}); err != nil {
+		logger.Errorf("AutoMigrate failed: %v", err)
 	}
+
+	rdb := initRedis(cfg)
 	defer rdb.Close()
 
-	// Initialize caches
 	var productCache cache.ProductCache = redisCache.NewProductCache(rdb)
 	var tokenCache cache.TokenCache = redisCache.NewTokenCache(rdb)
 	var rateLimitCache cache.RateLimitCache = redisCache.NewRateLimitCache(rdb)
 
-	router := gin.Default()
-
-	if config.AppEnv == "production" {
-		gin.SetMode(gin.ReleaseMode)
+	router := gin.New()
+	if err := router.SetTrustedProxies(nil); err != nil {
+		logger.Warnf("Failed to set trusted proxies: %v", err)
 	}
 
-	// Add middleware (early in the chain)
-	router.Use(middleware.MetricsMiddleware(metricsCollector))
-	router.Use(middleware.TracingMiddleware("pos-api"))
-	router.Use(middleware.LoggerMiddleware(logger.Get()))
+	router.Use(
+		middleware.RecoveryMiddleware(),
+		middleware.TracingMiddleware("pos-api"),
+		middleware.MetricsMiddleware(metricsCollector),
+		middleware.LoggerMiddleware(logger.Get()),
+	)
 
-	// Serve uploaded files for local storage
-	if config.StorageType == "local" {
-		router.Static(config.StorageLocalURL, config.StorageLocalPath)
+	if cfg.StorageType == "local" {
+		router.Static(cfg.StorageLocalURL, cfg.StorageLocalPath)
 	}
 
 	if metricsHandler != nil {
@@ -113,66 +85,163 @@ func main() {
 	}
 
 	router.GET("/health", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{
-			"status": "OK",
-		})
+		ctx.JSON(200, gin.H{"status": "OK"})
 	})
-	userRepository := postgres.NewUserRepository(db)
+
+	userRepository := postgres.NewUserRepository(dbConn)
 	userUsecase := usecase.NewUserUsecase(userRepository)
 	validate := validation.NewValidator()
-	userHandler := handler.NewUserHandler(logger.Get(), userUsecase, validate)
+	userHandler := handler.NewUserHandler(userUsecase, validate)
 
-	// Seed default admin user (idempotent)
-	if err := seeder.SeedAdmin(context.Background(), userRepository, config.AdminName, config.AdminEmail, config.AdminPhone, config.AdminPassword); err != nil {
+	if err := seeder.SeedAdmin(context.Background(), userRepository, cfg.AdminName, cfg.AdminEmail, cfg.AdminPhone, cfg.AdminPassword); err != nil {
 		logger.Errorf("failed to seed admin user: %v", err)
 	}
 
-	// Initialize File Storage
 	fileStorage, err := file.NewFileStorage(file.StorageConfig{
-		Type:          config.StorageType,
-		LocalBasePath: config.StorageLocalPath,
-		LocalBaseURL:  config.StorageLocalURL,
-		S3Bucket:      config.S3Bucket,
-		S3Region:      config.S3Region,
-		S3AccessKey:   config.S3AccessKey,
-		S3SecretKey:   config.S3SecretKey,
-		S3Endpoint:    config.S3Endpoint,
-		S3BaseURL:     config.S3BaseURL,
-		S3ACL:         config.S3ACL,
+		Type:          cfg.StorageType,
+		LocalBasePath: cfg.StorageLocalPath,
+		LocalBaseURL:  cfg.StorageLocalURL,
+		S3Bucket:      cfg.S3Bucket,
+		S3Region:      cfg.S3Region,
+		S3AccessKey:   cfg.S3AccessKey,
+		S3SecretKey:   cfg.S3SecretKey,
+		S3Endpoint:    cfg.S3Endpoint,
+		S3BaseURL:     cfg.S3BaseURL,
+		S3ACL:         cfg.S3ACL,
 	})
 	if err != nil {
-		panic(fmt.Sprintf("failed to initialize file storage: %v", err))
+		logger.Errorf("failed to initialize file storage: %v", err)
+		return
 	}
-	logger.Infof("File storage initialized: %s", config.StorageType)
+	logger.Infof("File storage initialized: %s", cfg.StorageType)
 
-	productRepository := postgres.NewProductRepository(db)
-
-	orderRepository := postgres.NewOrderRepository(db)
+	productRepository := postgres.NewProductRepository(dbConn)
+	orderRepository := postgres.NewOrderRepository(dbConn)
 	orderUsecase := usecase.NewOrderUsecase(orderRepository, productRepository)
 	orderHandler := handler.NewOrderHandler(orderUsecase, validate)
 
-	addressRepository := postgres.NewAddressRepository(db)
+	addressRepository := postgres.NewAddressRepository(dbConn)
 	addressUsecase := usecase.NewAddressUsecase(addressRepository)
 	addressHandler := handler.NewAddressHandler(addressUsecase, validate)
 
 	productUsecase := usecase.NewProductUsecase(productRepository, productCache)
 	productHandler := handler.NewProductHandler(productUsecase, validate, fileStorage)
 
-	// Initialize JWT Manager
-	jwtManager := jwt.NewJWTManager(config.JWTPrivateKey, config.JWTTokenDuration)
+	jwtManager := jwt.NewJWTManager(cfg.JWTPrivateKey, cfg.JWTTokenDuration)
+	authHandler := handler.NewAuthHandler(userUsecase, validate, jwtManager, tokenCache)
 
-	// Initialize Auth Handler
-	authHandler := handler.NewAuthHandler(logger.Get(), userUsecase, validate, jwtManager, tokenCache)
-
-	// Setup Routes
 	routes.SetupAuthRoutes(router, authHandler, rateLimitCache, jwtManager, tokenCache)
 	routes.SetupUserRoutes(router, userHandler, jwtManager, tokenCache)
 	routes.SetupOrderRoutes(router, orderHandler, jwtManager, tokenCache)
 	routes.SetupAddressRoutes(router, addressHandler, jwtManager, tokenCache)
 	routes.SetupProductRoutes(router, productHandler, jwtManager, tokenCache)
 
-	logger.Info("Starting Server on port " + strconv.Itoa(config.AppPort))
-	router.Run(":" + strconv.Itoa(config.AppPort))
+	startServer(router, cfg.AppPort)
+}
+
+func setGinMode(appEnv string) {
+	if appEnv == "production" {
+		gin.SetMode(gin.ReleaseMode)
+	}
+}
+
+func initTracing(cfg *config.Config) func() {
+	jaegerEndpoint := getEnv("JAEGER_ENDPOINT", "http://jaeger:14268/api/traces")
+	tp, err := tracer.InitTracer("pos-api", jaegerEndpoint)
+	if err != nil {
+		logger.Warnf("Failed to initialize tracer: %v. Continuing without tracing.", err)
+		return func() {}
+	}
+
+	logger.Info("OpenTelemetry tracer initialized successfully")
+	return func() {
+		if err := tracer.Shutdown(context.Background(), tp); err != nil {
+			logger.Errorf("Failed to shutdown tracer: %v", err)
+		}
+	}
+}
+
+func initMetrics() (http.Handler, func()) {
+	mp, metricsHandler, err := tracer.InitPrometheusMeterProvider("pos")
+	if err != nil {
+		logger.Warnf("Failed to initialize prometheus metrics: %v. Continuing without metrics.", err)
+		return nil, func() {}
+	}
+
+	logger.Info("Prometheus metrics exporter initialized successfully")
+	return metricsHandler, func() {
+		if err := mp.Shutdown(context.Background()); err != nil {
+			logger.Errorf("Failed to shutdown meter provider: %v", err)
+		}
+	}
+}
+
+func initDatabase(cfg *config.Config) (*gorm.DB, func(), error) {
+	dbConn, err := db.InitializeDB(cfg.DBDriver, cfg.DBHost, cfg.DBPort, cfg.DBUser, cfg.DBPassword, cfg.DBName)
+	if err != nil {
+		return nil, func() {}, err
+	}
+	logger.Info("DB started successfully")
+
+	closeFn := func() {
+		sqlDB, err := dbConn.DB()
+		if err != nil {
+			logger.Errorf("Failed to get sql DB: %v", err)
+			return
+		}
+		if err := sqlDB.Close(); err != nil {
+			logger.Errorf("Failed to close DB: %v", err)
+		}
+	}
+
+	return dbConn, closeFn, nil
+}
+
+func initRedis(cfg *config.Config) *redisClient.Client {
+	rdb, err := redisClient.NewClient(cfg)
+	if err != nil {
+		logger.Warnf("Redis initialization failed: %v. Continuing without cache.", err)
+		return &redisClient.Client{}
+	}
+	return rdb
+}
+
+func startServer(router *gin.Engine, port int) {
+	srv := &http.Server{
+		Addr:              ":" + strconv.Itoa(port),
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		logger.Infof("Starting server on port %d", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			errChan <- err
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	select {
+	case sig := <-stop:
+		logger.Infof("Shutdown signal received: %s", sig.String())
+	case err := <-errChan:
+		logger.Errorf("Server error: %v", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		logger.Errorf("Server shutdown failed: %v", err)
+	} else {
+		logger.Info("Server stopped gracefully")
+	}
 }
 
 // getEnv gets environment variable with default value

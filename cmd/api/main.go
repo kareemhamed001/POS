@@ -10,18 +10,18 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/kareemhamed001/POS/internal/cache"
-	redisCache "github.com/kareemhamed001/POS/internal/cache/redis"
+	redisCache "github.com/kareemhamed001/POS/internal/adapters/cache/redis"
 	"github.com/kareemhamed001/POS/internal/config"
-	"github.com/kareemhamed001/POS/internal/db"
-	"github.com/kareemhamed001/POS/internal/db/seeder"
-	"github.com/kareemhamed001/POS/internal/delivery/http/handler"
-	"github.com/kareemhamed001/POS/internal/delivery/http/middleware"
-	"github.com/kareemhamed001/POS/internal/delivery/http/routes"
-	validation "github.com/kareemhamed001/POS/internal/delivery/http/validation"
-	"github.com/kareemhamed001/POS/internal/entity"
-	"github.com/kareemhamed001/POS/internal/repository/postgres"
-	"github.com/kareemhamed001/POS/internal/usecase"
+	entity "github.com/kareemhamed001/POS/internal/core/domain"
+	"github.com/kareemhamed001/POS/internal/core/ports"
+	"github.com/kareemhamed001/POS/internal/core/usecase"
+	"github.com/kareemhamed001/POS/internal/adapters/db"
+	"github.com/kareemhamed001/POS/internal/adapters/db/seeder"
+	"github.com/kareemhamed001/POS/internal/adapters/http/handler"
+	"github.com/kareemhamed001/POS/internal/adapters/http/middleware"
+	"github.com/kareemhamed001/POS/internal/adapters/http/routes"
+	validation "github.com/kareemhamed001/POS/internal/adapters/http/validation"
+	"github.com/kareemhamed001/POS/internal/adapters/persistence/postgres"
 	"github.com/kareemhamed001/POS/pkg/file"
 	"github.com/kareemhamed001/POS/pkg/jwt"
 	"github.com/kareemhamed001/POS/pkg/logger"
@@ -60,9 +60,9 @@ func main() {
 	rdb := initRedis(cfg)
 	defer rdb.Close()
 
-	var productCache cache.ProductCache = redisCache.NewProductCache(rdb)
-	var tokenCache cache.TokenCache = redisCache.NewTokenCache(rdb)
-	var rateLimitCache cache.RateLimitCache = redisCache.NewRateLimitCache(rdb)
+	var productCache ports.ProductCache = redisCache.NewProductCache(rdb)
+	var tokenCache ports.TokenCache = redisCache.NewTokenCache(rdb)
+	var rateLimitCache ports.RateLimitCache = redisCache.NewRateLimitCache(rdb)
 
 	router := gin.New()
 	if err := router.SetTrustedProxies(nil); err != nil {

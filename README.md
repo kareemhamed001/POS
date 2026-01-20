@@ -352,24 +352,31 @@ POS/
 │   └── api/
 │       └── main.go                 # Application entry point
 ├── internal/
-│   ├── config/
-│   │   └── config.go              # Configuration management
-│   ├── db/
-│   │   └── db.go                  # Database initialization
-│   ├── delivery/
-│   │   └── http/
-│   │       ├── handler/           # HTTP request handlers
-│   │       ├── middleware/        # HTTP middlewares
-│   │       ├── request/           # Request DTOs
-│   │       ├── response/          # Response helpers
-│   │       ├── routes/            # Route definitions
-│   │       └── validator/         # Custom validators
-│   ├── entity/                    # Domain entities
-│   ├── repository/
-│   │   └── postgres/              # Data access layer
-│   └── usecase/                   # Business logic layer
+│   ├── config/                     # Configuration management
+│   ├── core/
+│   │   ├── domain/                 # Domain entities
+│   │   ├── ports/                  # Interfaces (ports)
+│   │   └── usecase/                # Business logic (application services)
+│   ├── adapters/
+│   │   ├── http/                   # HTTP delivery (Gin)
+│   │   │   ├── handler/
+│   │   │   ├── middleware/
+│   │   │   ├── request/
+│   │   │   ├── response/
+│   │   │   ├── routes/
+│   │   │   └── validation/
+│   │   ├── persistence/
+│   │   │   └── postgres/           # GORM repositories
+│   │   ├── cache/
+│   │   │   └── redis/              # Redis cache adapters
+│   │   └── db/                     # DB initialization and seeding
 ├── pkg/
 │   └── logger/                    # Global logger package
+│   └── jwt/                       # JWT utility package
+│   └── password/                  # Password hashing utility
+│   └── file/                      # File handling utility
+│   └── tracer/                    # OpenTelemetry tracing utility
+│   └── redis/                     # Redis client utility
 ├── docker-compose.yml             # Docker Compose configuration
 ├── Dockerfile                     # Production Dockerfile
 ├── Dockerfile.dev                 # Development Dockerfile with Air
@@ -388,7 +395,7 @@ go test ./...
 ### Run Specific Tests
 
 ```bash
-go test -v ./internal/repository/postgres -run TestUserRepository
+go test -v ./internal/adapters/persistence/postgres -run TestUserRepository
 ```
 
 ### Run Tests with Coverage
@@ -402,24 +409,22 @@ go tool cover -html=coverage.out
 ### Run Tests with Coverage Report
 
 ```bash
-go test -v -coverprofile=coverage.out ./internal/repository/postgres
+go test -v -coverprofile=coverage.out ./internal/adapters/persistence/postgres
 ```
 
 ## 📊 Architecture
 
-### Clean Architecture Pattern
+### Hexagonal Architecture (Ports & Adapters)
 
-The project follows Clean Architecture principles:
+The project follows Hexagonal Architecture principles:
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│              API Layer (Handlers)                   │
+│           Adapters (HTTP, DB, Cache)                │
 ├─────────────────────────────────────────────────────┤
-│              Use Cases (Business Logic)             │
+│          Use Cases (Application Services)           │
 ├─────────────────────────────────────────────────────┤
-│              Repository (Data Access)              │
-├─────────────────────────────────────────────────────┤
-│              Database (PostgreSQL)                  │
+│                Domain + Ports                       │
 └─────────────────────────────────────────────────────┘
 ```
 

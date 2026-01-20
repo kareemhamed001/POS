@@ -59,7 +59,7 @@ func NewConfig() *Config {
 		DBName:           getEnvString("DB_NAME", "faq_db"),
 		MongoDBUri:       getEnvString("MONGO_DB_URI", "mongodb://admin:admin@localhost:27017/faq_db"),
 		JWTPrivateKey:    getEnvString("JWT_PRIVATE_KEY", "your_jwt_private_key"),
-		JWTTokenDuration: time.Duration(getEnvInt("JWT_TOKEN_DURATION", 24)) * time.Hour,
+		JWTTokenDuration: time.Duration(getEnvInt("JWT_TOKEN_DURATION", 1)) * time.Hour,
 		AdminName:        getEnvString("ADMIN_NAME", "Admin"),
 		AdminEmail:       getEnvString("ADMIN_EMAIL", "admin@example.com"),
 		AdminPhone:       getEnvString("ADMIN_PHONE", "+201000000000"),

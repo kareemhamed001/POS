@@ -10,22 +10,19 @@ import (
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
 // FileStorage defines the interface for file storage operations
 type FileStorage interface {
-	// Upload saves a file and returns the URL path
 	Upload(ctx context.Context, file *multipart.FileHeader, path string) (string, error)
-	// Delete removes a file by its path/key
 	Delete(ctx context.Context, path string) error
-	// GetURL returns the accessible URL for a file
 	GetURL(path string) string
-	// Exists checks if a file exists
 	Exists(ctx context.Context, path string) (bool, error)
 }
 
@@ -145,37 +142,50 @@ type S3Storage struct {
 	region   string
 	baseURL  string
 	acl      string
-	uploader *s3manager.Uploader
-	s3Client *s3.S3
+	uploader *manager.Uploader
+	s3Client *s3.Client
 }
 
 // NewS3Storage creates a new S3 storage handler
 func NewS3Storage(cfg StorageConfig) (*S3Storage, error) {
-	// Create AWS session
-	awsCfg := &aws.Config{
-		Region: aws.String(cfg.S3Region),
+	// Load AWS config
+	loadOptions := []func(*config.LoadOptions) error{
+		config.WithRegion(cfg.S3Region),
 	}
 
 	if cfg.S3AccessKey != "" && cfg.S3SecretKey != "" {
-		awsCfg.Credentials = credentials.NewStaticCredentials(
+		staticCredentials := credentials.NewStaticCredentialsProvider(
 			cfg.S3AccessKey,
 			cfg.S3SecretKey,
 			"",
 		)
+		loadOptions = append(loadOptions, config.WithCredentialsProvider(staticCredentials))
 	}
 
 	if cfg.S3Endpoint != "" {
-		awsCfg.Endpoint = aws.String(cfg.S3Endpoint)
-		awsCfg.S3ForcePathStyle = aws.Bool(true)
+		customEndpoint := cfg.S3Endpoint
+		endpointResolver := aws.EndpointResolverWithOptionsFunc(
+			func(service, region string, options ...interface{}) (aws.Endpoint, error) {
+				if service == s3.ServiceID {
+					return aws.Endpoint{URL: customEndpoint, SigningRegion: cfg.S3Region}, nil
+				}
+				return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+			},
+		)
+		loadOptions = append(loadOptions, config.WithEndpointResolverWithOptions(endpointResolver))
 	}
 
-	sess, err := session.NewSession(awsCfg)
+	awsCfg, err := config.LoadDefaultConfig(context.Background(), loadOptions...)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create AWS session: %w", err)
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	s3Client := s3.New(sess)
-	uploader := s3manager.NewUploader(sess)
+	s3Client := s3.NewFromConfig(awsCfg, func(options *s3.Options) {
+		if cfg.S3Endpoint != "" {
+			options.UsePathStyle = true
+		}
+	})
+	uploader := manager.NewUploader(s3Client)
 
 	baseURL := cfg.S3BaseURL
 	if baseURL == "" {
@@ -211,16 +221,16 @@ func (s *S3Storage) Upload(ctx context.Context, file *multipart.FileHeader, path
 	defer src.Close()
 
 	// Prepare upload input
-	input := &s3manager.UploadInput{
+	input := &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(path),
 		Body:        src,
-		ACL:         aws.String(s.acl),
+		ACL:         types.ObjectCannedACL(s.acl),
 		ContentType: aws.String(file.Header.Get("Content-Type")),
 	}
 
 	// Upload to S3
-	result, err := s.uploader.UploadWithContext(ctx, input)
+	result, err := s.uploader.Upload(ctx, input)
 	if err != nil {
 		return "", fmt.Errorf("failed to upload to S3: %w", err)
 	}
@@ -239,7 +249,7 @@ func (s *S3Storage) Delete(ctx context.Context, path string) error {
 		Key:    aws.String(path),
 	}
 
-	_, err := s.s3Client.DeleteObjectWithContext(ctx, input)
+	_, err := s.s3Client.DeleteObject(ctx, input)
 	if err != nil {
 		return fmt.Errorf("failed to delete from S3: %w", err)
 	}
@@ -260,7 +270,7 @@ func (s *S3Storage) Exists(ctx context.Context, path string) (bool, error) {
 		Key:    aws.String(path),
 	}
 
-	_, err := s.s3Client.HeadObjectWithContext(ctx, input)
+	_, err := s.s3Client.HeadObject(ctx, input)
 	if err != nil {
 		if strings.Contains(err.Error(), "NotFound") {
 			return false, nil

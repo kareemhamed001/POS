@@ -6,6 +6,11 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type JWTService interface {
+	Generate(userID uint, email, role string) (string, error)
+	Verify(accessToken string) (*UserClaims, error)
+}
+
 type JWTManager struct {
 	secretKey     string
 	tokenDuration time.Duration
